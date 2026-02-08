@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: deploy-manager-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: deploy-manager
+
+  backend:
+    build: ./backend
+    container_name: deploy-manager-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mongodb
+    environment:
+      - PORT=3001
+      - MONGODB_URI=mongodb://mongodb:27017/deploy-manager
+      - JWT_SECRET=change-this-secret-key
+      - PROJECTS_DIR=/var/www/projects
+      - NODE_ENV=production
+    volumes:
+      - projects_data:/var/www/projects
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  frontend:
+    build: ./frontend
+    container_name: deploy-manager-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
+
+volumes:
+  mongodb_data:
+  projects_data:
