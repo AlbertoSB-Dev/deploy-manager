@@ -6,6 +6,7 @@ import EditGroupModal from './EditGroupModal';
 import { DndContext, DragEndEvent, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { api } from '@/lib/api';
 
 interface Project {
   _id: string;
@@ -182,20 +183,11 @@ export default function ProjectGroupView({ projects, groups, onProjectUpdated }:
     // Se o grupo mudou, atualizar
     if (newGroupId !== project.groupId) {
       try {
-        const response = await fetch(`http://localhost:8001/api/projects/${projectId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            groupId: newGroupId,
-            groupName: newGroupName,
-          }),
+        await api.put(`/projects/${projectId}`, {
+          groupId: newGroupId,
+          groupName: newGroupName,
         });
-
-        if (response.ok) {
-          onProjectUpdated();
-        }
+        onProjectUpdated();
       } catch (error) {
         console.error('Erro ao mover projeto:', error);
       }
@@ -208,22 +200,15 @@ export default function ProjectGroupView({ projects, groups, onProjectUpdated }:
     }
 
     try {
-      const response = await fetch(`http://localhost:8001/api/groups/${groupId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao deletar grupo');
-      }
+      await api.delete(`/groups/${groupId}`);
 
       // Atualizar projetos para remover groupId
       const groupProjects = projects.filter(p => p.groupId === groupId);
       await Promise.all(
         groupProjects.map(project =>
-          fetch(`http://localhost:8001/api/projects/${project._id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ groupId: null, groupName: null }),
+          api.put(`/projects/${project._id}`, {
+            groupId: null,
+            groupName: null,
           })
         )
       );

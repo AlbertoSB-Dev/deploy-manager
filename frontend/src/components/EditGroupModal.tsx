@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { api } from '@/lib/api';
 
 interface Group {
   _id: string;
@@ -42,27 +43,16 @@ export default function EditGroupModal({ group, onClose, onUpdated }: EditGroupM
     setError('');
 
     try {
-      const response = await fetch(`http://localhost:8001/api/groups/${group._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          description,
-          icon,
-          color,
-        }),
+      await api.put(`/groups/${group._id}`, {
+        name,
+        description,
+        icon,
+        color,
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Erro ao atualizar grupo');
-      }
 
       onUpdated();
     } catch (error: any) {
-      setError(error.message);
+      setError(error.response?.data?.error || error.message || 'Erro ao atualizar grupo');
     } finally {
       setLoading(false);
     }

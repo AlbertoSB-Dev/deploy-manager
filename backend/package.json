@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "set PORT=8001&& ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "set PORT=8001&& node dist/index.js"
+    "start": "set PORT=8001&& node dist/index.js",
+    "make-admin": "node scripts/make-admin.js",
+    "seed-plans": "node scripts/seed-plans.js"
   },
   "dependencies": {
     "axios": "^1.13.4",

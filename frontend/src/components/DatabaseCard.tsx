@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import CredentialsModal from '@/components/CredentialsModal';
+import { api } from '@/lib/api';
 
 interface Database {
   _id: string;
@@ -59,9 +60,7 @@ export default function DatabaseCard({ database, onDeleted }: DatabaseCardProps)
   const handleStart = async () => {
     setLoading(true);
     try {
-      await fetch(`http://localhost:8001/api/databases/${database._id}/start`, {
-        method: 'POST',
-      });
+      await api.post(`/databases/${database._id}/start`);
       window.location.reload();
     } catch (error) {
       console.error('Erro ao iniciar banco:', error);
@@ -73,9 +72,7 @@ export default function DatabaseCard({ database, onDeleted }: DatabaseCardProps)
   const handleStop = async () => {
     setLoading(true);
     try {
-      await fetch(`http://localhost:8001/api/databases/${database._id}/stop`, {
-        method: 'POST',
-      });
+      await api.post(`/databases/${database._id}/stop`);
       window.location.reload();
     } catch (error) {
       console.error('Erro ao parar banco:', error);
@@ -87,9 +84,7 @@ export default function DatabaseCard({ database, onDeleted }: DatabaseCardProps)
   const handleRestart = async () => {
     setLoading(true);
     try {
-      await fetch(`http://localhost:8001/api/databases/${database._id}/restart`, {
-        method: 'POST',
-      });
+      await api.post(`/databases/${database._id}/restart`);
       window.location.reload();
     } catch (error) {
       console.error('Erro ao reiniciar banco:', error);
@@ -105,9 +100,7 @@ export default function DatabaseCard({ database, onDeleted }: DatabaseCardProps)
 
     setLoading(true);
     try {
-      await fetch(`http://localhost:8001/api/databases/${database._id}`, {
-        method: 'DELETE',
-      });
+      await api.delete(`/databases/${database._id}`);
       onDeleted();
     } catch (error) {
       console.error('Erro ao deletar banco:', error);

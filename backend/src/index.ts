@@ -14,6 +14,8 @@ import githubRoutes from './routes/github';
 import serverRoutes from './routes/servers';
 import databaseRoutes from './routes/databases';
 import groupRoutes from './routes/groups';
+import authRoutes from './routes/auth';
+import adminRoutes from './routes/admin';
 import { UpdateCheckerService } from './services/UpdateCheckerService';
 
 const app = express();
@@ -26,13 +28,20 @@ const io = new Server(server, {
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:8000', 'http://localhost:3000'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization']
+}));
 app.use(express.json());
 
 // Disponibilizar io para as rotas
 app.set('io', io);
 
 // Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/github', githubRoutes);
 app.use('/api', serverRoutes);

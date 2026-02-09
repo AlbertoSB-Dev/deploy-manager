@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import ProjectGroup from '../models/ProjectGroup';
+import { protect, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-// Listar todos os grupos
-router.get('/', async (req, res) => {
+// Listar todos os grupos do usuário
+router.get('/', protect, async (req: AuthRequest, res) => {
   try {
-    const groups = await ProjectGroup.find().sort({ name: 1 });
+    const groups = await ProjectGroup.find({ userId: req.user?._id }).sort({ name: 1 });
     res.json(groups);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
 });
 
 // Criar novo grupo
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req: AuthRequest, res) => {
   try {
     const { name, description, icon, color } = req.body;
     
@@ -26,7 +27,8 @@ router.post('/', async (req, res) => {
       name,
       description,
       icon: icon || '📁',
-      color: color || '#3B82F6'
+      color: color || '#3B82F6',
+      userId: req.user?._id // Adicionar userId
     });
 
     await group.save();
@@ -37,12 +39,12 @@ router.post('/', async (req, res) => {
 });
 
 // Atualizar grupo
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, async (req: AuthRequest, res) => {
   try {
     const { name, description, icon, color } = req.body;
     
-    const group = await ProjectGroup.findByIdAndUpdate(
-      req.params.id,
+    const group = await ProjectGroup.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user?._id },
       { name, description, icon, color },
       { new: true }
     );
@@ -58,9 +60,12 @@ router.put('/:id', async (req, res) => {
 });
 
 // Deletar grupo
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req: AuthRequest, res) => {
   try {
-    const group = await ProjectGroup.findByIdAndDelete(req.params.id);
+    const group = await ProjectGroup.findOneAndDelete({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
     
     if (!group) {
       return res.status(404).json({ error: 'Grupo não encontrado' });

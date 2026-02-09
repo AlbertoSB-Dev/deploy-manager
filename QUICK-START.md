@@ -1,71 +1,69 @@
 # 🚀 Quick Start - Deploy Manager
 
-## Instalação com Um Comando
+## Instalação
 
-### Linux / Mac
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/seu-usuario/deploy-manager/main/scripts/one-line-install.sh | bash
-```
-
-### Windows (PowerShell como Administrador)
-
-```powershell
-iwr -useb https://raw.githubusercontent.com/seu-usuario/deploy-manager/main/install.ps1 | iex
-```
-
----
-
-## Ou Clone e Instale
-
-### 1. Clone o repositório
+### Opção 1: Docker (Recomendado)
 
 ```bash
 git clone https://github.com/seu-usuario/deploy-manager.git
 cd deploy-manager
-```
-
-### 2. Escolha o método de instalação
-
-#### Opção A: Com Docker (Recomendado)
-
-```bash
 docker-compose up -d
 ```
 
-#### Opção B: Manual
-
-**Linux/Mac:**
-```bash
-chmod +x scripts/install.sh
-./scripts/install.sh
-./start.sh
-```
-
-**Windows:**
-```powershell
-.\install.ps1
-.\start.ps1
-```
-
-#### Opção C: Com Make
+### Opção 2: Manual
 
 ```bash
-make install
-make start
+git clone https://github.com/seu-usuario/deploy-manager.git
+cd deploy-manager
+
+# Backend
+cd backend
+npm install
+cp .env.example .env
+npm run dev
+
+# Frontend (novo terminal)
+cd ../frontend
+npm install
+npm run dev
 ```
 
----
+## Acesse o Painel
 
-## 3. Acesse o Painel
+**Frontend:** http://localhost:3000  
+**Backend:** http://localhost:8001
 
-Abra seu navegador em: **http://localhost:3000**
+## Primeiro Deploy
 
----
+1. Clique em **"Novo Projeto"**
+2. Preencha:
+   - Nome: `meu-projeto`
+   - Git URL: `https://github.com/usuario/repo.git`
+   - Branch: `main`
+   - Tipo: Frontend/Backend
+   - Porta: `3000`
+3. Clique em **"Criar Projeto"**
+4. Clique em **"Deploy"**
+
+✅ Pronto! Seu projeto estará rodando em `meu-projeto.localhost:3000`
+
+## Repositório Privado
+
+Ao criar o projeto, configure a autenticação:
+
+**SSH Key:**
+- Tipo: SSH Key
+- Path: `/home/user/.ssh/id_rsa`
+
+**Token:**
+- Tipo: Personal Access Token
+- Token: `ghp_xxxxxxxxxxxx`
+
+📖 [Guia completo](./docs/PRIVATE-REPOS.md)
 
 ## Comandos Úteis
 
-### Com Docker
+### Docker
 
 ```bash
 # Ver logs
@@ -81,128 +79,31 @@ docker-compose restart
 docker-compose up -d --build
 ```
 
-### Manual (Linux/Mac)
+### Manual
 
 ```bash
-# Iniciar
-./start.sh
+# Ver logs backend
+cd backend && npm run dev
 
-# Parar
-./stop.sh
-
-# Ver logs
-tail -f logs/backend.log
-tail -f logs/frontend.log
+# Ver logs frontend
+cd frontend && npm run dev
 ```
-
-### Manual (Windows)
-
-```powershell
-# Iniciar
-.\start.ps1
-
-# Parar
-Stop-Process -Name "node"
-```
-
-### Com Make
-
-```bash
-# Ver todos os comandos
-make help
-
-# Iniciar
-make start
-
-# Parar
-make stop
-
-# Ver logs
-make logs
-
-# Docker
-make docker-up
-make docker-logs
-make docker-down
-```
-
----
-
-## Primeiro Uso
-
-1. **Acesse o painel**: http://localhost:3000
-
-2. **Clique em "Novo Projeto"**
-
-3. **Preencha as informações:**
-   - Nome: `meu-projeto`
-   - URL do Git: `https://github.com/usuario/repo.git`
-   - Branch: `main`
-   - Tipo: Frontend/Backend/Fullstack
-   - Comandos de build e start
-
-4. **Configure autenticação** (se repositório privado):
-   - SSH Key, Token ou Username/Password
-
-5. **Clique em "Criar Projeto"**
-
-6. **Faça o primeiro deploy** clicando no botão "Deploy"
-
----
-
-## Estrutura de Diretórios
-
-```
-deploy-manager/
-├── backend/          # API Node.js
-├── frontend/         # Interface Next.js
-├── projects/         # Projetos gerenciados (criado automaticamente)
-├── logs/             # Logs dos serviços
-├── scripts/          # Scripts de instalação
-├── start.sh          # Iniciar serviços (Linux/Mac)
-├── stop.sh           # Parar serviços (Linux/Mac)
-├── start.ps1         # Iniciar serviços (Windows)
-└── docker-compose.yml # Configuração Docker
-```
-
----
 
 ## Troubleshooting
 
 ### Porta já em uso
 
-**Backend (3001):**
 ```bash
-# Linux/Mac
-lsof -ti:3001 | xargs kill -9
-
 # Windows
-netstat -ano | findstr :3001
+netstat -ano | findstr :8001
 taskkill /PID <PID> /F
-```
 
-**Frontend (3000):**
-```bash
 # Linux/Mac
-lsof -ti:3000 | xargs kill -9
-
-# Windows
-netstat -ano | findstr :3000
-taskkill /PID <PID> /F
+lsof -ti:8001 | xargs kill -9
 ```
 
 ### MongoDB não conecta
 
-**Verificar se está rodando:**
-```bash
-# Linux/Mac
-ps aux | grep mongod
-
-# Windows
-tasklist | findstr mongod
-```
-
-**Iniciar MongoDB:**
 ```bash
 # Linux
 sudo systemctl start mongodb
@@ -214,25 +115,8 @@ brew services start mongodb-community
 net start MongoDB
 ```
 
-### Erro de permissão (Linux/Mac)
-
-```bash
-chmod +x scripts/*.sh
-chmod +x start.sh stop.sh
-```
-
----
-
 ## Próximos Passos
 
 - 📖 Leia a [documentação completa](./README.md)
 - 🔐 Configure [repositórios privados](./docs/PRIVATE-REPOS.md)
 - 🐳 Use [Docker para produção](./docker-compose.yml)
-
----
-
-## Suporte
-
-- 🐛 Issues: https://github.com/seu-usuario/deploy-manager/issues
-- 📧 Email: seu-email@example.com
-- 💬 Discord: https://discord.gg/seu-servidor
