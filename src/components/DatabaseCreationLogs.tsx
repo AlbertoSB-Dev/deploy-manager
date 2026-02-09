@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { api } from '@/lib/api';
 
 interface Log {
   message: string;
@@ -157,14 +158,15 @@ export default function DatabaseCreationLogs({ databaseName, onComplete, onError
         <div className="p-6 border-t border-gray-200 dark:border-gray-700">
           {isComplete ? (
             <button
-              onClick={() => {
+              onClick={async () => {
                 // Buscar banco criado e chamar onComplete
-                fetch(`http://localhost:8001/api/databases`)
-                  .then(res => res.json())
-                  .then(databases => {
-                    const db = databases.find((d: any) => d.name === databaseName);
-                    if (db) onComplete(db);
-                  });
+                try {
+                  const response = await api.get('/databases');
+                  const db = response.data.find((d: any) => d.name === databaseName);
+                  if (db) onComplete(db);
+                } catch (error) {
+                  console.error('Erro ao buscar banco:', error);
+                }
               }}
               className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
             >

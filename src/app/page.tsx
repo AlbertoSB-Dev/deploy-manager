@@ -1,302 +1,349 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, RefreshCw, Rocket, Activity, TrendingUp, Moon, Sun, Server, FolderPlus } from 'lucide-react';
-import { api } from '@/lib/api';
-import { ProjectCard } from '@/components/ProjectCard';
-import { CreateProjectWithGitHub } from '@/components/CreateProjectWithGitHub';
-import { ServerList } from '@/components/ServerList';
-import DatabaseList from '@/components/DatabaseList';
-import ProjectGroupView from '@/components/ProjectGroupView';
-import CreateGroupModal from '@/components/CreateGroupModal';
-import { useTheme } from '@/contexts/ThemeContext';
-import toast from 'react-hot-toast';
+import Link from 'next/link';
+import { Rocket, GitBranch, Terminal, Zap, Shield, Globe, CheckCircle, ArrowRight, Github, Server, Clock } from 'lucide-react';
 
-export default function Home() {
-  const [projects, setProjects] = useState<any[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'groups'>('groups');
-  const [activeTab, setActiveTab] = useState<'projects' | 'servers' | 'databases'>('projects');
-  const { theme, toggleTheme } = useTheme();
+export default function LandingPage() {
+  const [terminalLines, setTerminalLines] = useState<string[]>([]);
+  const [currentStep, setCurrentStep] = useState(0);
 
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/projects');
-      setProjects(response.data);
-    } catch (error: any) {
-      toast.error('Erro ao carregar projetos');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadGroups = async () => {
-    try {
-      const response = await fetch('http://localhost:8001/api/groups');
-      const data = await response.json();
-      setGroups(data);
-    } catch (error: any) {
-      console.error('Erro ao carregar grupos:', error);
-    }
-  };
+  const deploySteps = [
+    { text: '$ deploy-manager add-server vps-01 --ip 192.168.1.100', delay: 100, color: 'text-green-400' },
+    { text: '🔌 Conectando ao servidor via SSH...', delay: 800, color: 'text-gray-400' },
+    { text: '✓ Conexão estabelecida', delay: 600, color: 'text-green-400' },
+    { text: '📦 Instalando Docker...', delay: 1000, color: 'text-blue-400' },
+    { text: '✓ Docker instalado com sucesso', delay: 800, color: 'text-green-400' },
+    { text: '🔧 Configurando Nginx...', delay: 900, color: 'text-blue-400' },
+    { text: '✓ Nginx configurado', delay: 600, color: 'text-green-400' },
+    { text: '', delay: 400, color: '' },
+    { text: '$ deploy-manager deploy my-app --server vps-01', delay: 100, color: 'text-green-400' },
+    { text: '📡 Clonando repositório...', delay: 800, color: 'text-gray-400' },
+    { text: '✓ Repositório clonado', delay: 700, color: 'text-green-400' },
+    { text: '🔨 Construindo imagem Docker...', delay: 1200, color: 'text-blue-400' },
+    { text: '✓ Imagem construída', delay: 900, color: 'text-green-400' },
+    { text: '🚀 Iniciando container...', delay: 800, color: 'text-blue-400' },
+    { text: '✓ Container iniciado', delay: 600, color: 'text-green-400' },
+    { text: '🌐 Configurando domínio...', delay: 700, color: 'text-blue-400' },
+    { text: '✓ Deploy concluído com sucesso!', delay: 600, color: 'text-green-400 font-bold' },
+    { text: '🔗 https://my-app.yourdomain.com', delay: 400, color: 'text-cyan-400' },
+  ];
 
   useEffect(() => {
-    loadProjects();
-    loadGroups();
-  }, []);
+    if (currentStep < deploySteps.length) {
+      const timer = setTimeout(() => {
+        setTerminalLines(prev => [...prev, deploySteps[currentStep].text]);
+        setCurrentStep(prev => prev + 1);
+      }, deploySteps[currentStep].delay);
 
-  const handleDataUpdate = () => {
-    loadProjects();
-    loadGroups();
-  };
+      return () => clearTimeout(timer);
+    } else {
+      // Reiniciar animação após 3 segundos
+      const resetTimer = setTimeout(() => {
+        setTerminalLines([]);
+        setCurrentStep(0);
+      }, 3000);
 
-  const stats = {
-    total: projects.length,
-    active: projects.filter(p => p.status === 'active').length,
-    withUpdates: projects.filter(p => p.hasUpdate).length,
-  };
+      return () => clearTimeout(resetTimer);
+    }
+  }, [currentStep]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 transition-colors">
+      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg">
                 <Rocket className="w-6 h-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Deploy Manager</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors">Gerencie seus deploys com facilidade</p>
-              </div>
+              <span className="text-2xl font-bold text-gray-900 dark:text-white">Deploy Manager</span>
             </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={toggleTheme}
-                className="p-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700 rounded-xl transition shadow-sm border border-gray-200 dark:border-gray-600"
-                title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/pricing"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition"
               >
-                {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-              </button>
-              {activeTab === 'projects' && (
-                <>
-                  <button
-                    onClick={() => setViewMode(viewMode === 'grid' ? 'groups' : 'grid')}
-                    className="p-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700 rounded-xl transition shadow-sm border border-gray-200 dark:border-gray-600"
-                    title={viewMode === 'grid' ? 'Ver por Grupos' : 'Ver em Grade'}
-                  >
-                    {viewMode === 'grid' ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                      </svg>
-                    )}
-                  </button>
-                  <button
-                    onClick={loadProjects}
-                    className="p-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700 rounded-xl transition shadow-sm border border-gray-200 dark:border-gray-600"
-                    title="Atualizar"
-                  >
-                    <RefreshCw className="w-5 h-5" />
-                  </button>
-                </>
-              )}
+                Planos
+              </Link>
+              <Link
+                href="/login"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition"
+              >
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition shadow-md font-medium"
+              >
+                Começar Grátis
+              </Link>
             </div>
-          </div>
-          
-          {/* Tabs */}
-          <div className="flex gap-2 mt-4 border-b border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setActiveTab('projects')}
-              className={`flex items-center gap-2 px-4 py-2 font-medium transition border-b-2 ${
-                activeTab === 'projects'
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
-            >
-              <Rocket className="w-4 h-4" />
-              Projetos
-            </button>
-            <button
-              onClick={() => setActiveTab('servers')}
-              className={`flex items-center gap-2 px-4 py-2 font-medium transition border-b-2 ${
-                activeTab === 'servers'
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
-            >
-              <Server className="w-4 h-4" />
-              Servidores
-            </button>
-            <button
-              onClick={() => setActiveTab('databases')}
-              className={`flex items-center gap-2 px-4 py-2 font-medium transition border-b-2 ${
-                activeTab === 'databases'
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-              </svg>
-              Bancos de Dados
-            </button>
           </div>
         </div>
       </header>
 
-      {/* Stats Bar */}
-      {!loading && projects.length > 0 && activeTab === 'projects' && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total de Projetos</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">{stats.total}</p>
-                </div>
-                <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <Rocket className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
+      {/* Hero Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-700 dark:text-blue-400 text-sm font-medium mb-8">
+          <Zap className="w-4 h-4" />
+          Gerencie servidores VPS sem instalar painéis
+        </div>
+        
+        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
+          Gerencie múltiplos servidores
+          <br />
+          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            de um único lugar
+          </span>
+        </h1>
+        
+        <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 max-w-3xl mx-auto">
+          Painel centralizado para gerenciar servidores VPS via SSH. Configure, faça deploy e monitore 
+          múltiplos servidores sem instalar nada neles. Tudo automatizado.
+        </p>
+        
+        <div className="flex items-center justify-center gap-4">
+          <Link
+            href="/pricing"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition shadow-lg hover:shadow-xl text-lg font-semibold"
+          >
+            Ver Planos
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+          <Link
+            href="/register"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-md border border-gray-200 dark:border-gray-700 text-lg font-semibold"
+          >
+            Começar Grátis
+          </Link>
+        </div>
+
+        {/* Screenshot/Preview */}
+        <div className="mt-16 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 blur-3xl"></div>
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-8">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span className="ml-4 text-sm text-gray-500 dark:text-gray-400 font-medium">deploy-manager</span>
             </div>
-            
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Projetos Ativos</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-0.5">{stats.active}</p>
+            <div className="bg-gray-900 rounded-lg p-6 text-left font-mono text-sm min-h-[320px] overflow-hidden">
+              {terminalLines.map((line, index) => (
+                <div 
+                  key={index} 
+                  className={`${deploySteps[index]?.color || 'text-gray-400'} mb-1 animate-fade-in`}
+                >
+                  {line}
+                  {index === terminalLines.length - 1 && currentStep < deploySteps.length && (
+                    <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse"></span>
+                  )}
                 </div>
-                <div className="p-2.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <Activity className="w-5 h-5 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Atualizações Disponíveis</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-0.5">{stats.withUpdates}</p>
-                </div>
-                <div className="p-2.5 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        {activeTab === 'projects' ? (
-          loading ? (
-            <div className="flex flex-col items-center justify-center h-64">
-              <div className="relative">
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 dark:border-gray-700"></div>
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent absolute top-0"></div>
-              </div>
-              <p className="text-gray-600 dark:text-gray-400 mt-4 font-medium">Carregando projetos...</p>
+      {/* Features Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Tudo que você precisa para gerenciar servidores
+          </h2>
+          <p className="text-xl text-gray-600 dark:text-gray-400">
+            Um painel centralizado para controlar toda sua infraestrutura
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Feature 1 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-4">
+              <Server className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
-          ) : projects.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="inline-flex p-6 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-3xl mb-6">
-                <Rocket className="w-20 h-20 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Gerenciamento Centralizado</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Controle múltiplos servidores VPS de um único painel. Conexão via SSH sem instalações.
+            </p>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-4">
+              <Zap className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Configuração Automática</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Adicione um servidor e o sistema configura tudo automaticamente: Docker, Nginx, SSL e mais.
+            </p>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-4">
+              <Rocket className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Deploy Remoto</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Faça deploy em qualquer servidor conectado. Git, Docker e proxy reverso configurados automaticamente.
+            </p>
+          </div>
+
+          {/* Feature 4 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-4">
+              <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Monitoramento em Tempo Real</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Logs em tempo real, status dos containers e recursos de cada servidor em um só lugar.
+            </p>
+          </div>
+
+          {/* Feature 5 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center mb-4">
+              <Terminal className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Terminal SSH Integrado</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Execute comandos diretamente nos servidores remotos através do painel web.
+            </p>
+          </div>
+
+          {/* Feature 6 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-4">
+              <GitBranch className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Multi-Projeto</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Gerencie múltiplos projetos em múltiplos servidores. Rollback, versões e histórico completo.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="bg-white dark:bg-gray-800 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+                Por que Deploy Manager?
+              </h2>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Sem Instalações nos Servidores</h3>
+                    <p className="text-gray-600 dark:text-gray-400">Conecte via SSH e o sistema configura tudo automaticamente. Sem painéis para instalar.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Gerenciamento Centralizado</h3>
+                    <p className="text-gray-600 dark:text-gray-400">Um único painel para controlar todos os seus servidores VPS e projetos.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Configuração Zero</h3>
+                    <p className="text-gray-600 dark:text-gray-400">Adicione IP, usuário e senha SSH. O resto é automático: Docker, Nginx, SSL, tudo configurado.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Multi-Servidor</h3>
+                    <p className="text-gray-600 dark:text-gray-400">Gerencie quantos servidores quiser. Deploy em qualquer um deles com um clique.</p>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Nenhum projeto ainda</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">Comece criando seu primeiro projeto e faça deploys com facilidade</p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition shadow-lg hover:shadow-xl text-lg font-medium"
+            </div>
+            <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
+              <h3 className="text-2xl font-bold mb-4">Comece Agora</h3>
+              <p className="mb-6 text-blue-100">
+                Conecte seus servidores VPS e comece a gerenciar tudo de um único lugar.
+              </p>
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition font-semibold"
               >
-                <Plus className="w-6 h-6" />
-                <span>Criar Primeiro Projeto</span>
-              </button>
+                Criar Conta Grátis
+                <ArrowRight className="w-5 h-5" />
+              </Link>
             </div>
-          ) : (
-            <>
-              {/* Barra de Ações */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {viewMode === 'grid' ? 'Todos os Projetos' : 'Projetos por Grupo'}
-                  </h2>
-                  <span className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-full text-xs font-medium text-gray-700 dark:text-gray-300">
-                    {projects.length}
-                  </span>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+          Pronto para centralizar seus servidores?
+        </h2>
+        <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
+          Gerencie todos os seus servidores VPS de um único painel. Sem instalações, sem complicação.
+        </p>
+        <Link
+          href="/register"
+          className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition shadow-lg hover:shadow-xl text-lg font-semibold"
+        >
+          Começar Gratuitamente
+          <ArrowRight className="w-5 h-5" />
+        </Link>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg">
+                  <Rocket className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowCreateGroupModal(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-lg transition shadow-sm"
-                  >
-                    <FolderPlus className="w-4 h-4" />
-                    <span className="font-medium">Novo Grupo</span>
-                  </button>
-                  <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition shadow-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span className="font-medium">Novo Projeto</span>
-                  </button>
-                </div>
+                <span className="text-lg font-bold text-gray-900 dark:text-white">Deploy Manager</span>
               </div>
-
-              {/* Conteúdo dos Projetos */}
-              {viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {projects.map((project) => (
-                    <ProjectCard key={project._id} project={project} onUpdate={handleDataUpdate} />
-                  ))}
-                </div>
-              ) : (
-                <ProjectGroupView
-                  projects={projects}
-                  groups={groups}
-                  onProjectUpdated={handleDataUpdate}
-                />
-              )}
-            </>
-          )
-        ) : activeTab === 'servers' ? (
-          <ServerList />
-        ) : (
-          <DatabaseList />
-        )}
-      </main>
-
-      {/* Create Project Modal */}
-      {showCreateModal && (
-        <CreateProjectWithGitHub
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            setShowCreateModal(false);
-            loadProjects();
-          }}
-        />
-      )}
-
-      {/* Create Group Modal */}
-      {showCreateGroupModal && (
-        <CreateGroupModal
-          onClose={() => setShowCreateGroupModal(false)}
-          onCreated={() => {
-            setShowCreateGroupModal(false);
-            handleDataUpdate();
-            toast.success('Grupo criado com sucesso!');
-          }}
-        />
-      )}
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Painel centralizado para gerenciar servidores VPS via SSH.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Produto</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">Funcionalidades</Link></li>
+                <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">Preços</Link></li>
+                <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">Documentação</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Empresa</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">Sobre</Link></li>
+                <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">Blog</Link></li>
+                <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">Contato</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">Privacidade</Link></li>
+                <li><Link href="#" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">Termos</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-200 dark:border-gray-700 mt-8 pt-8 text-center text-sm text-gray-600 dark:text-gray-400">
+            © 2026 Deploy Manager. Todos os direitos reservados.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

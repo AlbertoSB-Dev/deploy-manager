@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import DatabaseCard from '@/components/DatabaseCard';
 import CreateDatabaseModal from '@/components/CreateDatabaseModal';
+import { api } from '@/lib/api';
 
 interface Database {
   _id: string;
@@ -32,9 +33,8 @@ export default function DatabaseList() {
 
   const fetchDatabases = async () => {
     try {
-      const response = await fetch('http://localhost:8001/api/databases');
-      const data = await response.json();
-      setDatabases(data);
+      const response = await api.get('/databases');
+      setDatabases(response.data);
     } catch (error) {
       console.error('Erro ao buscar bancos:', error);
     } finally {

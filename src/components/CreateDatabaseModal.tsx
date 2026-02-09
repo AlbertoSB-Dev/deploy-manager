@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import DatabaseCreationLogs from './DatabaseCreationLogs';
 import CredentialsModal from './CredentialsModal';
+import { api } from '@/lib/api';
 
 interface Server {
   _id: string;
@@ -79,9 +80,8 @@ export default function CreateDatabaseModal({ onClose, onCreated }: CreateDataba
   const fetchVersions = async () => {
     try {
       setLoadingVersions(true);
-      const response = await fetch('http://localhost:8001/api/databases/versions');
-      const data = await response.json();
-      setVersions(data);
+      const response = await api.get('/databases/versions');
+      setVersions(response.data);
     } catch (error) {
       console.error('Erro ao buscar versões:', error);
       // Manter versões padrão em caso de erro
@@ -92,11 +92,10 @@ export default function CreateDatabaseModal({ onClose, onCreated }: CreateDataba
 
   const fetchServers = async () => {
     try {
-      const response = await fetch('http://localhost:8001/api/servers');
-      const data = await response.json();
-      setServers(data);
-      if (data.length > 0) {
-        setServerId(data[0]._id);
+      const response = await api.get('/servers');
+      setServers(response.data);
+      if (response.data.length > 0) {
+        setServerId(response.data[0]._id);
       }
     } catch (error) {
       console.error('Erro ao buscar servidores:', error);
@@ -110,32 +109,23 @@ export default function CreateDatabaseModal({ onClose, onCreated }: CreateDataba
 
     try {
       // Iniciar criação (não aguardar resposta)
-      fetch('http://localhost:8001/api/databases', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          displayName: name,
-          type,
-          version,
-          serverId,
-        }),
-      }).then(async (response) => {
-        if (!response.ok) {
-          const data = await response.json();
-          setError(data.error || 'Erro ao criar banco de dados');
-          setLoading(false);
-          setShowLogs(false);
-        }
+      api.post('/databases', {
+        name,
+        displayName: name,
+        type,
+        version,
+        serverId,
+      }).catch((error) => {
+        setError(error.response?.data?.error || error.message || 'Erro ao criar banco de dados');
+        setLoading(false);
+        setShowLogs(false);
       });
 
       // Mostrar logs imediatamente
       setShowLogs(true);
       
     } catch (error: any) {
-      setError(error.message);
+      setError(error.response?.data?.error || error.message || 'Erro ao criar banco de dados');
       setLoading(false);
     }
   };

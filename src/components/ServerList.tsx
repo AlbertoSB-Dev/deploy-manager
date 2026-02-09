@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Server, Plus, RefreshCw, Trash2, Settings, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Server, Plus, RefreshCw, Trash2, Settings, CheckCircle, XCircle, AlertCircle, BarChart3 } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { AddServerModal } from './AddServerModal';
 import { ProvisioningModal } from './ProvisioningModal';
+import { ServerMonitorModal } from './ServerMonitorModal';
 
 interface ServerData {
   _id: string;
@@ -38,6 +39,8 @@ export function ServerList() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [provisioningServerId, setProvisioningServerId] = useState<string | null>(null);
+  const [monitoringServerId, setMonitoringServerId] = useState<string | null>(null);
+  const [monitoringServerName, setMonitoringServerName] = useState<string>('');
 
   useEffect(() => {
     loadServers();
@@ -231,6 +234,16 @@ export function ServerList() {
                 </div>
 
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setMonitoringServerId(server._id);
+                      setMonitoringServerName(server.name);
+                    }}
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
+                    title="Monitorar servidor"
+                  >
+                    <BarChart3 className="w-5 h-5" />
+                  </button>
                   {server.provisioningStatus === 'provisioning' && (
                     <button
                       onClick={() => setProvisioningServerId(server._id)}
@@ -287,6 +300,17 @@ export function ServerList() {
           onClose={() => {
             setProvisioningServerId(null);
             loadServers();
+          }}
+        />
+      )}
+
+      {monitoringServerId && (
+        <ServerMonitorModal
+          serverId={monitoringServerId}
+          serverName={monitoringServerName}
+          onClose={() => {
+            setMonitoringServerId(null);
+            setMonitoringServerName('');
           }}
         />
       )}

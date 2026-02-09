@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { api } from '@/lib/api';
 
 interface CreateGroupModalProps {
   onClose: () => void;
@@ -33,27 +34,16 @@ export default function CreateGroupModal({ onClose, onCreated }: CreateGroupModa
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8001/api/groups', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          description,
-          icon,
-          color,
-        }),
+      await api.post('/groups', {
+        name,
+        description,
+        icon,
+        color,
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Erro ao criar grupo');
-      }
 
       onCreated();
     } catch (error: any) {
-      setError(error.message);
+      setError(error.response?.data?.error || error.message || 'Erro ao criar grupo');
     } finally {
       setLoading(false);
     }

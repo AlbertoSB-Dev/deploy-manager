@@ -47,26 +47,59 @@ export default function GitHubRepoSelector({ onSelect }: GitHubRepoSelectorProps
   }, [search, repos]);
 
   const loadRepos = async () => {
-    const token = localStorage.getItem('github_token');
-    if (!token) {
+    // Buscar token da conta ativa do GitHubAccountManager
+    const { GitHubAccountManager } = await import('@/lib/githubAccounts');
+    const activeAccount = GitHubAccountManager.getActiveAccount();
+    
+    if (!activeAccount) {
+      console.log('⚠️ Nenhuma conta GitHub conectada');
       setLoading(false);
       return;
     }
 
+    const token = activeAccount.token;
+    console.log('🔑 Usando token da conta:', activeAccount.username);
+
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
+      console.log('📡 Buscando repositórios do GitHub...');
       
-      const response = await fetch(`${apiUrl}/github/repos`, {
+      // Buscar diretamente da API do GitHub
+      const response = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
         }
       });
 
-      const data = await response.json();
-      setRepos(data.repos || []);
-      setFilteredRepos(data.repos || []);
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const githubRepos = await response.json();
+      console.log(`✅ ${githubRepos.length} repositórios encontrados`);
+
+      // Mapear para o formato esperado
+      const mappedRepos: GitHubRepo[] = githubRepos.map((repo: any) => ({
+        id: repo.id,
+        name: repo.name,
+        fullName: repo.full_name,
+        description: repo.description,
+        private: repo.private,
+        cloneUrl: repo.clone_url,
+        sshUrl: repo.ssh_url,
+        defaultBranch: repo.default_branch,
+        language: repo.language,
+        updatedAt: repo.updated_at,
+        owner: {
+          login: repo.owner.login,
+          avatar: repo.owner.avatar_url,
+        },
+      }));
+
+      setRepos(mappedRepos);
+      setFilteredRepos(mappedRepos);
     } catch (error) {
-      console.error('Erro ao carregar repositórios:', error);
+      console.error('❌ Erro ao carregar repositórios:', error);
     } finally {
       setLoading(false);
     }
