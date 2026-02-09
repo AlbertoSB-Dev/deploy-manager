@@ -5,26 +5,30 @@ import { DeployService } from '../services/DeployService';
 import { GitCredentialService } from '../services/GitCredentialService';
 import { PortManager } from '../services/PortManager';
 import { UpdateCheckerService } from '../services/UpdateCheckerService';
+import { protect, AuthRequest } from '../middleware/auth';
 import path from 'path';
 
 const router = Router();
 const deployService = new DeployService();
 const updateChecker = new UpdateCheckerService();
 
-// Listar todos os projetos
-router.get('/', async (req, res) => {
+// Listar todos os projetos do usuário
+router.get('/', protect, async (req: AuthRequest, res) => {
   try {
-    const projects = await Project.find().sort({ createdAt: -1 });
+    const projects = await Project.find({ userId: req.user?._id }).sort({ createdAt: -1 });
     res.json(projects);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Obter projeto específico
-router.get('/:id', async (req, res) => {
+// Obter projeto específico do usuário
+router.get('/:id', protect, async (req: AuthRequest, res) => {
   try {
-    const project = await Project.findById(req.params.id);
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
     if (!project) return res.status(404).json({ error: 'Projeto não encontrado' });
     res.json(project);
   } catch (error: any) {
@@ -33,7 +37,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Criar novo projeto
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req: AuthRequest, res) => {
   try {
     const { name, displayName, gitUrl, branch, type, port, envVars, buildCommand, startCommand, gitAuth, serverId, serverName } = req.body;
     
@@ -115,7 +119,8 @@ router.post('/', async (req, res) => {
       gitAuth: gitAuth || { type: 'none' },
       serverId: serverId || undefined,
       serverName: serverName || undefined,
-      serverHost: serverHost || undefined
+      serverHost: serverHost || undefined,
+      userId: req.user?._id // Adicionar userId do usuário logado
     });
 
     await project.save();
@@ -133,10 +138,10 @@ router.post('/', async (req, res) => {
 });
 
 // Atualizar projeto
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, async (req: AuthRequest, res) => {
   try {
-    const project = await Project.findByIdAndUpdate(
-      req.params.id,
+    const project = await Project.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user?._id },
       { $set: req.body },
       { new: true }
     );
@@ -149,8 +154,18 @@ router.put('/:id', async (req, res) => {
 });
 
 // Deletar projeto
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req: AuthRequest, res) => {
   try {
+    // Verificar se o projeto pertence ao usuário
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Projeto não encontrado' });
+    }
+    
     await deployService.deleteProject(req.params.id);
     res.json({ message: 'Projeto deletado com sucesso' });
   } catch (error: any) {
@@ -159,8 +174,18 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Deploy projeto
-router.post('/:id/deploy', async (req, res) => {
+router.post('/:id/deploy', protect, async (req: AuthRequest, res) => {
   try {
+    // Verificar se o projeto pertence ao usuário
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Projeto não encontrado' });
+    }
+    
     const { version, deployedBy } = req.body;
     const result = await deployService.deployProject(req.params.id, version, deployedBy || 'manual');
     res.json(result);
@@ -170,8 +195,18 @@ router.post('/:id/deploy', async (req, res) => {
 });
 
 // Rollback rápido (usa container anterior)
-router.post('/:id/rollback/fast', async (req, res) => {
+router.post('/:id/rollback/fast', protect, async (req: AuthRequest, res) => {
   try {
+    // Verificar se o projeto pertence ao usuário
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Projeto não encontrado' });
+    }
+    
     const { deployedBy } = req.body;
     const result = await deployService.rollback(req.params.id, undefined, deployedBy || 'manual');
     res.json(result);
@@ -181,8 +216,18 @@ router.post('/:id/rollback/fast', async (req, res) => {
 });
 
 // Rollback completo (faz novo deploy de versão específica)
-router.post('/:id/rollback', async (req, res) => {
+router.post('/:id/rollback', protect, async (req: AuthRequest, res) => {
   try {
+    // Verificar se o projeto pertence ao usuário
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Projeto não encontrado' });
+    }
+    
     const { deploymentIndex, deployedBy } = req.body;
     const result = await deployService.rollback(req.params.id, deploymentIndex, deployedBy || 'manual');
     res.json(result);
@@ -192,8 +237,18 @@ router.post('/:id/rollback', async (req, res) => {
 });
 
 // Verificar se há atualizações disponíveis
-router.get('/:id/check-updates', async (req, res) => {
+router.get('/:id/check-updates', protect, async (req: AuthRequest, res) => {
   try {
+    // Verificar se o projeto pertence ao usuário
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Projeto não encontrado' });
+    }
+    
     const result = await updateChecker.checkForUpdates(req.params.id);
     res.json(result);
   } catch (error: any) {
@@ -202,9 +257,13 @@ router.get('/:id/check-updates', async (req, res) => {
 });
 
 // Obter versões disponíveis (tags e branches)
-router.get('/:id/versions', async (req, res) => {
+router.get('/:id/versions', protect, async (req: AuthRequest, res) => {
   try {
-    const project = await Project.findById(req.params.id);
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
     if (!project) return res.status(404).json({ error: 'Projeto não encontrado' });
 
     const gitService = new GitService(project.workDir, project.gitAuth);
@@ -220,8 +279,18 @@ router.get('/:id/versions', async (req, res) => {
 });
 
 // Obter logs do projeto
-router.get('/:id/logs', async (req, res) => {
+router.get('/:id/logs', protect, async (req: AuthRequest, res) => {
   try {
+    // Verificar se o projeto pertence ao usuário
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Projeto não encontrado' });
+    }
+    
     const logs = await deployService.getProjectLogs(req.params.id);
     res.json({ logs });
   } catch (error: any) {
@@ -230,23 +299,48 @@ router.get('/:id/logs', async (req, res) => {
 });
 
 // Executar comando no container (terminal)
-router.post('/:id/exec', async (req, res) => {
+router.post('/:id/exec', protect, async (req: AuthRequest, res) => {
   try {
     const { command } = req.body;
     if (!command) {
       res.status(400).json({ error: 'Comando é obrigatório' });
       return;
     }
+    
+    // Verificar se o projeto pertence ao usuário
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
+    if (!project) {
+      res.status(404).json({ error: 'Projeto não encontrado' });
+      return;
+    }
+    
     const output = await deployService.execCommand(req.params.id, command);
     res.json({ output });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      output: '',
+      error: error.message 
+    });
   }
 });
 
 // Iniciar container
-router.post('/:id/container/start', async (req, res) => {
+router.post('/:id/container/start', protect, async (req: AuthRequest, res) => {
   try {
+    // Verificar se o projeto pertence ao usuário
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Projeto não encontrado' });
+    }
+    
     await deployService.startContainer(req.params.id);
     res.json({ message: 'Container iniciado com sucesso' });
   } catch (error: any) {
@@ -255,8 +349,18 @@ router.post('/:id/container/start', async (req, res) => {
 });
 
 // Parar container
-router.post('/:id/container/stop', async (req, res) => {
+router.post('/:id/container/stop', protect, async (req: AuthRequest, res) => {
   try {
+    // Verificar se o projeto pertence ao usuário
+    const project = await Project.findOne({ 
+      _id: req.params.id,
+      userId: req.user?._id 
+    });
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Projeto não encontrado' });
+    }
+    
     await deployService.stopContainer(req.params.id);
     res.json({ message: 'Container parado com sucesso' });
   } catch (error: any) {
@@ -265,7 +369,7 @@ router.post('/:id/container/stop', async (req, res) => {
 });
 
 // Detectar credenciais Git automaticamente
-router.post('/detect-credentials', async (req, res) => {
+router.post('/detect-credentials', protect, async (req: AuthRequest, res) => {
   try {
     const { gitUrl } = req.body;
     
@@ -297,7 +401,7 @@ router.post('/detect-credentials', async (req, res) => {
 });
 
 // Verificar se porta está disponível
-router.get('/check-port/:port', async (req, res) => {
+router.get('/check-port/:port', protect, async (req: AuthRequest, res) => {
   try {
     const port = parseInt(req.params.port);
     
@@ -319,7 +423,7 @@ router.get('/check-port/:port', async (req, res) => {
 });
 
 // Sugerir portas disponíveis
-router.get('/suggest-ports', async (req, res) => {
+router.get('/suggest-ports', protect, async (req: AuthRequest, res) => {
   try {
     const count = parseInt(req.query.count as string) || 5;
     const suggestions = await PortManager.suggestPorts(count);

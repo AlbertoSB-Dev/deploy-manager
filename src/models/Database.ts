@@ -23,12 +23,13 @@ export interface IDatabase extends Document {
   accessKey?: string;
   secretKey?: string;
   consoleUrl?: string;
+  userId: string; // ID do usuário dono do banco
   createdAt: Date;
   updatedAt: Date;
 }
 
 const DatabaseSchema = new Schema<IDatabase>({
-  name: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
   displayName: { type: String, required: true },
   type: { type: String, required: true, enum: ['mongodb', 'mysql', 'mariadb', 'postgresql', 'redis', 'minio'] },
   version: { type: String, required: true },
@@ -48,8 +49,12 @@ const DatabaseSchema = new Schema<IDatabase>({
   accessKey: { type: String },
   secretKey: { type: String },
   consoleUrl: { type: String },
+  userId: { type: String, required: true, index: true }, // ID do usuário dono
 }, {
   timestamps: true
 });
+
+// Índice composto: nome único por usuário
+DatabaseSchema.index({ name: 1, userId: 1 }, { unique: true });
 
 export default mongoose.model<IDatabase>('Database', DatabaseSchema);

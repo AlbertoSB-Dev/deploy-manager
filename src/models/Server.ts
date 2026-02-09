@@ -37,6 +37,7 @@ export interface IServer extends Document {
   status: 'online' | 'offline' | 'error';
   lastCheck: Date;
   projects: string[];
+  userId: string; // ID do usuário dono do servidor
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,9 +85,13 @@ const ServerSchema = new Schema<IServer>({
     default: 'offline' 
   },
   lastCheck: { type: Date },
-  projects: [{ type: String }]
+  projects: [{ type: String }],
+  userId: { type: String, required: true, index: true } // ID do usuário dono
 }, {
   timestamps: true
 });
+
+// Índice composto: nome único por usuário
+ServerSchema.index({ name: 1, userId: 1 }, { unique: true });
 
 export const Server = mongoose.model<IServer>('Server', ServerSchema);

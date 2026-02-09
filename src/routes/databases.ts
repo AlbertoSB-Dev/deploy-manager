@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { databaseService } from '../services/DatabaseService';
 import { dockerVersionService } from '../services/DockerVersionService';
+import { protect, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-// Obter versões disponíveis de bancos de dados
+// Obter versões disponíveis de bancos de dados (não precisa de auth)
 router.get('/versions', async (req, res) => {
   try {
     const versions = await dockerVersionService.getAllVersions();
@@ -15,7 +16,7 @@ router.get('/versions', async (req, res) => {
 });
 
 // Limpar cache de versões (forçar atualização)
-router.post('/versions/refresh', async (req, res) => {
+router.post('/versions/refresh', protect, async (req: AuthRequest, res) => {
   try {
     dockerVersionService.clearCache();
     const versions = await dockerVersionService.getAllVersions();
@@ -25,20 +26,20 @@ router.post('/versions/refresh', async (req, res) => {
   }
 });
 
-// Listar todos os bancos de dados
-router.get('/', async (req, res) => {
+// Listar todos os bancos de dados do usuário
+router.get('/', protect, async (req: AuthRequest, res) => {
   try {
-    const databases = await databaseService.listDatabases();
+    const databases = await databaseService.listDatabases(req.user?._id.toString());
     res.json(databases);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Obter banco de dados específico
-router.get('/:id', async (req, res) => {
+// Obter banco de dados específico do usuário
+router.get('/:id', protect, async (req: AuthRequest, res) => {
   try {
-    const database = await databaseService.getDatabase(req.params.id);
+    const database = await databaseService.getDatabase(req.params.id, req.user?._id.toString());
     if (!database) {
       return res.status(404).json({ error: 'Banco de dados não encontrado' });
     }

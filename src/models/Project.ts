@@ -46,6 +46,7 @@ export interface IProject extends Document {
   serverHost?: string; // IP/Host do servidor remoto
   groupId?: string; // ID do grupo/pasta
   groupName?: string; // Nome do grupo para exibição
+  userId: string; // ID do usuário dono do projeto
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,7 +70,7 @@ const GitAuthSchema = new Schema({
 }, { _id: false });
 
 const ProjectSchema = new Schema({
-  name: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
   displayName: { type: String, required: true },
   gitUrl: { type: String, required: true },
   branch: { type: String, default: 'main' },
@@ -96,6 +97,7 @@ const ProjectSchema = new Schema({
   serverHost: { type: String }, // IP/Host do servidor remoto
   groupId: { type: String }, // ID do grupo/pasta
   groupName: { type: String }, // Nome do grupo
+  userId: { type: String, required: true, index: true }, // ID do usuário dono
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -104,5 +106,8 @@ ProjectSchema.pre('save', function(next) {
   this.updatedAt = new Date();
   next();
 });
+
+// Índice composto: nome único por usuário
+ProjectSchema.index({ name: 1, userId: 1 }, { unique: true });
 
 export default mongoose.model<IProject>('Project', ProjectSchema);
