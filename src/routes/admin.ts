@@ -369,4 +369,100 @@ router.post('/restart', async (req: AuthRequest, res) => {
   }
 });
 
+// ==========================================
+// SISTEMA DE ATUALIZAÇÃO
+// ==========================================
+
+// Obter informações do sistema
+router.get('/system-info', async (req: AuthRequest, res) => {
+  try {
+    const { execSync } = await import('child_process');
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    // Obter versão do package.json
+    const packageJsonPath = path.join(__dirname, '../../../package.json');
+    const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
+    const version = packageJson.version || '1.0.0';
+    
+    // Obter informações do Git
+    let gitCommit = 'unknown';
+    let gitBranch = 'unknown';
+    let lastUpdate = null;
+    
+    try {
+      gitCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+      gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim();
+      const lastCommitDate = execSync('git log -1 --format=%cd --date=iso', { encoding: 'utf-8' }).trim();
+      lastUpdate = new Date(lastCommitDate);
+    } catch (error) {
+      console.log('Git info not available');
+    }
+    
+    res.json({
+      version,
+      gitCommit,
+      gitBranch,
+      lastUpdate,
+      nodeVersion: process.version,
+      platform: process.platform,
+      uptime: process.uptime()
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Atualizar sistema do GitHub
+router.post('/update', async (req: AuthRequest, res) => {
+  try {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+    
+    console.log('🔄 Iniciando atualização do sistema...');
+    
+    // 1. Fazer backup do .env
+    console.log('📦 Fazendo backup do .env...');
+    await execAsync('cp .env .env.backup');
+    
+    // 2. Fazer git pull
+    console.log('⬇️  Baixando atualizações do GitHub...');
+    const { stdout: pullOutput } = await execAsync('git pull origin main');
+    console.log(pullOutput);
+    
+    // 3. Instalar dependências (se houver mudanças)
+    console.log('📦 Instalando dependências...');
+    await execAsync('cd backend && npm install');
+    await execAsync('cd frontend && npm install');
+    
+    // 4. Rebuild containers
+    console.log('🐳 Reconstruindo containers...');
+    await execAsync('docker-compose build');
+    
+    // 5. Reiniciar containers
+    console.log('🔄 Reiniciando containers...');
+    await execAsync('docker-compose down');
+    await execAsync('docker-compose up -d');
+    
+    console.log('✅ Atualização concluída!');
+    
+    res.json({ 
+      message: 'Sistema atualizado com sucesso! Reiniciando...',
+      output: pullOutput
+    });
+    
+    // Reiniciar processo após 5 segundos
+    setTimeout(() => {
+      process.exit(0);
+    }, 5000);
+  } catch (error: any) {
+    console.error('❌ Erro ao atualizar:', error);
+    res.status(500).json({ 
+      error: 'Erro ao atualizar sistema',
+      details: error.message 
+    });
+  }
+});
+
 export default router;
