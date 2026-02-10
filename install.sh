@@ -1,18 +1,19 @@
 #!/bin/bash
 
-# Deploy Manager - Script de Instalação Automática
-# Este script instala todas as dependências necessárias
+# Deploy Manager - Instalação Completa Automatizada
+# Este script instala TUDO e deixa rodando em Docker
 
 set -e
 
-echo "🚀 Deploy Manager - Instalação Automática"
-echo "=========================================="
+echo "🚀 Deploy Manager - Instalação Completa"
+echo "========================================"
 echo ""
 
 # Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Função para imprimir mensagens coloridas
@@ -29,7 +30,7 @@ print_warning() {
 }
 
 print_info() {
-    echo -e "ℹ️  $1"
+    echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
 # Verificar se está rodando como root
@@ -52,7 +53,7 @@ print_info "Sistema detectado: $OS $VERSION"
 echo ""
 
 # 1. Atualizar sistema
-print_info "1/10 Atualizando sistema..."
+print_info "1/8 Atualizando sistema..."
 if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
     apt-get update -qq
     apt-get upgrade -y -qq
@@ -62,7 +63,7 @@ fi
 print_success "Sistema atualizado"
 
 # 2. Instalar Docker
-print_info "2/10 Instalando Docker..."
+print_info "2/8 Instalando Docker..."
 if ! command -v docker &> /dev/null; then
     curl -fsSL https://get.docker.com -o get-docker.sh
     sh get-docker.sh
@@ -71,52 +72,30 @@ if ! command -v docker &> /dev/null; then
     rm get-docker.sh
     print_success "Docker instalado"
 else
-    print_success "Docker já instalado"
+    print_success "Docker já instalado ($(docker --version))"
 fi
 
 # 3. Instalar Docker Compose
-print_info "3/10 Instalando Docker Compose..."
+print_info "3/8 Instalando Docker Compose..."
 if ! command -v docker-compose &> /dev/null; then
     curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
     print_success "Docker Compose instalado"
 else
-    print_success "Docker Compose já instalado"
+    print_success "Docker Compose já instalado ($(docker-compose --version))"
 fi
 
-# 4. Instalar Node.js
-print_info "4/10 Instalando Node.js..."
-if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    apt-get install -y nodejs
-    print_success "Node.js instalado"
+# 4. Criar rede do Traefik
+print_info "4/8 Criando rede do Traefik..."
+if ! docker network ls | grep -q coolify; then
+    docker network create coolify
+    print_success "Rede coolify criada"
 else
-    print_success "Node.js já instalado ($(node -v))"
+    print_success "Rede coolify já existe"
 fi
 
-# 5. Instalar MongoDB
-print_info "5/10 Instalando MongoDB..."
-if ! systemctl is-active --quiet mongod; then
-    if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
-        curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
-        echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-        apt-get update -qq
-        apt-get install -y mongodb-org
-        systemctl enable mongod
-        systemctl start mongod
-    fi
-    print_success "MongoDB instalado"
-else
-    print_success "MongoDB já instalado"
-fi
-
-# 6. Instalar Traefik
-print_info "6/10 Instalando Traefik..."
-bash scripts/install-traefik.sh
-print_success "Traefik instalado"
-
-# 7. Configurar firewall
-print_info "7/10 Configurando firewall..."
+# 5. Configurar firewall
+print_info "5/8 Configurando firewall..."
 if command -v ufw &> /dev/null; then
     ufw allow 22/tcp
     ufw allow 80/tcp
@@ -129,8 +108,8 @@ else
     print_warning "UFW não encontrado, configure o firewall manualmente"
 fi
 
-# 8. Criar diretórios necessários
-print_info "8/10 Criando diretórios..."
+# 6. Criar diretórios necessários
+print_info "6/8 Criando diretórios..."
 mkdir -p /opt/deploy-manager
 mkdir -p /opt/projects
 mkdir -p /opt/databases
@@ -138,8 +117,8 @@ mkdir -p /opt/backups
 mkdir -p /var/log/deploy-manager
 print_success "Diretórios criados"
 
-# 9. Configurar variáveis de ambiente
-print_info "9/10 Configurando variáveis de ambiente..."
+# 7. Configurar variáveis de ambiente
+print_info "7/8 Configurando variáveis de ambiente..."
 
 # Detectar IP público
 PUBLIC_IP=$(curl -s ifconfig.me || echo "localhost")
@@ -147,65 +126,89 @@ PUBLIC_IP=$(curl -s ifconfig.me || echo "localhost")
 # Gerar secrets aleatórios
 JWT_SECRET=$(openssl rand -base64 32)
 ENCRYPTION_KEY=$(openssl rand -base64 32)
+MONGO_PASSWORD=$(openssl rand -base64 16)
 
-# Criar arquivo .env se não existir
-if [ ! -f backend/.env ]; then
-    cat > backend/.env << EOF
-PORT=8001
-MONGODB_URI=mongodb://localhost:27017/deploy-manager
+# Criar arquivo .env
+cat > .env << EOF
+# MongoDB
+MONGO_PASSWORD=$MONGO_PASSWORD
+
+# Segurança
 JWT_SECRET=$JWT_SECRET
 ENCRYPTION_KEY=$ENCRYPTION_KEY
 
-# Diretórios e Configurações
-PROJECTS_DIR=/opt/projects
-BASE_DOMAIN=sslip.io
+# Servidor
 SERVER_IP=$PUBLIC_IP
-NODE_ENV=production
+BASE_DOMAIN=sslip.io
+FRONTEND_URL=http://$PUBLIC_IP:8000
 
-# GitHub OAuth (configurar depois)
+# GitHub OAuth (configurar depois no painel)
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
-
-# URLs do Frontend
-FRONTEND_URL=http://$PUBLIC_IP:8000
 GITHUB_CALLBACK_URL=http://$PUBLIC_IP:8000/auth/github/callback
 EOF
-    print_success "Arquivo .env criado"
+
+print_success "Arquivo .env criado com secrets gerados"
+
+# 8. Iniciar containers Docker
+print_info "8/8 Iniciando containers Docker..."
+print_info "Isso pode levar alguns minutos na primeira vez..."
+
+# Build e start dos containers
+docker-compose up -d --build
+
+# Aguardar containers iniciarem
+print_info "Aguardando containers iniciarem..."
+sleep 30
+
+# Verificar se containers estão rodando
+if docker-compose ps | grep -q "Up"; then
+    print_success "Containers iniciados com sucesso!"
 else
-    print_success "Arquivo .env já existe"
+    print_error "Erro ao iniciar containers"
+    docker-compose logs
+    exit 1
 fi
 
-# 10. Instalar dependências do projeto
-print_info "10/10 Instalando dependências do projeto..."
-cd backend && npm install --production && cd ..
-cd frontend && npm install && npm run build && cd ..
-print_success "Dependências instaladas"
+# Criar usuário admin automaticamente
+print_info "Criando usuário admin..."
+sleep 10  # Aguardar MongoDB inicializar completamente
+
+# Tentar criar admin (pode falhar se já existir)
+docker-compose exec -T backend node scripts/make-admin-auto.js || print_warning "Admin já existe ou erro ao criar"
 
 echo ""
-echo "=========================================="
-print_success "Instalação concluída com sucesso!"
-echo "=========================================="
+echo "========================================"
+print_success "🎉 Instalação concluída com sucesso!"
+echo "========================================"
 echo ""
-echo "📋 Próximos passos:"
+echo "📋 Informações do Sistema:"
 echo ""
-echo "1. Configure o GitHub OAuth (opcional):"
-echo "   - Acesse: https://github.com/settings/developers"
-echo "   - Crie um novo OAuth App"
-echo "   - Callback URL: http://$PUBLIC_IP:8000/auth/github/callback"
-echo "   - Adicione as credenciais no arquivo backend/.env"
-echo ""
-echo "2. Inicie o backend:"
-echo "   cd backend && npm run dev"
-echo ""
-echo "3. Inicie o frontend:"
-echo "   cd frontend && npm run dev"
-echo ""
-echo "4. Acesse o painel:"
+echo "🌐 Acesse o painel:"
 echo "   http://$PUBLIC_IP:8000"
 echo ""
-echo "5. Crie o primeiro usuário admin:"
-echo "   cd backend && node scripts/make-admin-auto.js"
+echo "👤 Credenciais padrão:"
+echo "   Email: admin@admin.com"
+echo "   Senha: admin123"
+echo ""
+echo "⚙️  Configurações:"
+echo "   - Acesse: http://$PUBLIC_IP:8000/admin/settings"
+echo "   - Configure GitHub OAuth (opcional)"
+echo "   - Altere a senha padrão"
+echo ""
+echo "📊 Comandos úteis:"
+echo "   docker-compose logs -f          # Ver logs em tempo real"
+echo "   docker-compose ps               # Ver status dos containers"
+echo "   docker-compose restart          # Reiniciar serviços"
+echo "   docker-compose down             # Parar tudo"
+echo "   docker-compose up -d            # Iniciar novamente"
+echo ""
+echo "🔧 Gerenciar usuários:"
+echo "   docker-compose exec backend node scripts/make-admin.js"
+echo "   docker-compose exec backend node scripts/reset-password.js"
 echo ""
 echo "📚 Documentação: README.md"
-echo "🐛 Problemas? Abra uma issue no GitHub"
+echo "🐛 Problemas? Verifique os logs: docker-compose logs"
+echo ""
+print_success "Deploy Manager está rodando! 🚀"
 echo ""

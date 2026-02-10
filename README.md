@@ -73,7 +73,36 @@ deploy-manager/
 - Ubuntu/Debian (recomendado)
 - O sistema instala Docker e dependências automaticamente
 
-## 🚀 Instalação do Painel
+## 🚀 Instalação Rápida (1 Comando!)
+
+```bash
+# Clone e instale TUDO automaticamente
+git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
+cd deploy-manager
+chmod +x install.sh
+sudo ./install.sh
+```
+
+**Pronto!** O script faz tudo:
+- ✅ Instala Docker e Docker Compose
+- ✅ Cria rede do Traefik
+- ✅ Configura firewall
+- ✅ Gera secrets de segurança
+- ✅ Cria arquivo .env
+- ✅ Inicia containers Docker
+- ✅ Cria usuário admin automaticamente
+
+Após 2-3 minutos, acesse: **http://SEU_IP:8000**
+
+**Credenciais padrão:**
+- Email: `admin@admin.com`
+- Senha: `admin123`
+
+⚠️ **Importante:** Altere a senha após o primeiro login!
+
+---
+
+## 📋 Detalhes das Opções de Instalação
 
 ### Opção 1: Instalação com Docker (Recomendado)
 
