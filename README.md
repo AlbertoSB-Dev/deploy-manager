@@ -75,7 +75,40 @@ deploy-manager/
 
 ## 🚀 Instalação do Painel
 
-### Instalação Automática (Recomendado)
+### Opção 1: Instalação com Docker (Recomendado)
+
+**Mais fácil e rápido!** Tudo roda em containers isolados.
+
+```bash
+# Clone o repositório
+git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
+cd deploy-manager
+
+# Execute o instalador Docker
+chmod +x install-docker.sh
+sudo ./install-docker.sh
+
+# Inicie os containers
+docker-compose up -d
+
+# Aguarde 30-60 segundos e crie o admin
+docker-compose exec backend node scripts/make-admin-auto.js
+```
+
+Acesse: http://SEU_IP:8000
+
+**Comandos úteis:**
+```bash
+docker-compose logs -f          # Ver logs em tempo real
+docker-compose ps               # Ver status dos containers
+docker-compose restart          # Reiniciar todos os serviços
+docker-compose down             # Parar tudo
+docker-compose exec backend sh  # Acessar terminal do backend
+```
+
+### Opção 2: Instalação Nativa (Avançado)
+
+Instala diretamente no servidor sem Docker.
 
 ```bash
 # Clone o repositório
@@ -111,16 +144,6 @@ cd backend && node scripts/make-admin-auto.js
 ```
 
 Acesse: http://SEU_IP:8000
-
-### Com Docker (Alternativa)
-
-```bash
-git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
-cd deploy-manager
-docker-compose up -d
-```
-
-Acesse: http://localhost:3000
 
 ### Manual
 

@@ -1,46 +1,85 @@
 version: '3.8'
 
 services:
+  # MongoDB
   mongodb:
-    image: mongo:7
+    image: mongo:7.0
     container_name: deploy-manager-mongodb
     restart: unless-stopped
-    ports:
-      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme123}
     volumes:
       - mongodb_data:/data/db
-    environment:
-      MONGO_INITDB_DATABASE: deploy-manager
+    networks:
+      - deploy-manager-network
+    ports:
+      - "27017:27017"
 
+  # Backend API
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: deploy-manager-backend
     restart: unless-stopped
+    environment:
+      PORT: 8001
+      MONGODB_URI: mongodb://admin:${MONGO_PASSWORD:-changeme123}@mongodb:27017/deploy-manager?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-encryption-key-32-chars-min}
+      PROJECTS_DIR: /opt/projects
+      BASE_DOMAIN: ${BASE_DOMAIN:-sslip.io}
+      SERVER_IP: ${SERVER_IP:-localhost}
+      NODE_ENV: production
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8000}
+      GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:8000/auth/github/callback}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Acesso ao Docker do host
+      - /opt/projects:/opt/projects
+      - /opt/databases:/opt/databases
+      - /opt/backups:/opt/backups
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - deploy-manager-network
+      - coolify  # Conectar à rede do Traefik
     ports:
-      - "3001:3001"
+      - "8001:8001"
     depends_on:
       - mongodb
-    environment:
-      - PORT=3001
-      - MONGODB_URI=mongodb://mongodb:27017/deploy-manager
-      - JWT_SECRET=change-this-secret-key
-      - PROJECTS_DIR=/var/www/projects
-      - NODE_ENV=production
-    volumes:
-      - projects_data:/var/www/projects
-      - /var/run/docker.sock:/var/run/docker.sock
+    command: npm run dev
 
+  # Frontend
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: deploy-manager-frontend
     restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8001
+      NODE_ENV: production
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - deploy-manager-network
     ports:
-      - "3000:3000"
+      - "8000:3000"
     depends_on:
       - backend
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
+    command: npm run dev
+
+networks:
+  deploy-manager-network:
+    driver: bridge
+  coolify:
+    external: true  # Usar rede existente do Traefik
 
 volumes:
   mongodb_data:
-  projects_data:
+    driver: local
