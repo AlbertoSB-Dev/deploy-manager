@@ -264,4 +264,109 @@ router.delete('/plans/:id', async (req: AuthRequest, res) => {
   }
 });
 
+// ==========================================
+// CONFIGURAÇÕES DO SISTEMA
+// ==========================================
+
+// Obter configurações do sistema
+router.get('/settings', async (req: AuthRequest, res) => {
+  try {
+    const SystemSettings = (await import('../models/SystemSettings')).default;
+    
+    let settings = await SystemSettings.findOne();
+    
+    // Se não existir, criar com valores padrão do .env
+    if (!settings) {
+      settings = new SystemSettings({
+        serverIp: process.env.SERVER_IP || 'localhost',
+        baseDomain: process.env.BASE_DOMAIN || 'sslip.io',
+        frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8000',
+        githubClientId: process.env.GITHUB_CLIENT_ID || '',
+        githubClientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+        githubCallbackUrl: process.env.GITHUB_CALLBACK_URL || ''
+      });
+      await settings.save();
+    }
+    
+    res.json(settings);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Atualizar configurações do sistema
+router.put('/settings', async (req: AuthRequest, res) => {
+  try {
+    const SystemSettings = (await import('../models/SystemSettings')).default;
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    const { serverIp, baseDomain, frontendUrl, githubClientId, githubClientSecret, githubCallbackUrl } = req.body;
+    
+    // Atualizar no banco de dados
+    let settings = await SystemSettings.findOne();
+    
+    if (!settings) {
+      settings = new SystemSettings({
+        serverIp,
+        baseDomain,
+        frontendUrl,
+        githubClientId,
+        githubClientSecret,
+        githubCallbackUrl
+      });
+    } else {
+      settings.serverIp = serverIp;
+      settings.baseDomain = baseDomain;
+      settings.frontendUrl = frontendUrl;
+      settings.githubClientId = githubClientId;
+      settings.githubClientSecret = githubClientSecret;
+      settings.githubCallbackUrl = githubCallbackUrl;
+      settings.updatedAt = new Date();
+    }
+    
+    await settings.save();
+    
+    // Atualizar arquivo .env
+    const envPath = path.join(__dirname, '../../.env');
+    let envContent = await fs.readFile(envPath, 'utf-8');
+    
+    // Atualizar variáveis
+    envContent = envContent.replace(/SERVER_IP=.*/g, `SERVER_IP=${serverIp}`);
+    envContent = envContent.replace(/BASE_DOMAIN=.*/g, `BASE_DOMAIN=${baseDomain}`);
+    envContent = envContent.replace(/FRONTEND_URL=.*/g, `FRONTEND_URL=${frontendUrl}`);
+    envContent = envContent.replace(/GITHUB_CLIENT_ID=.*/g, `GITHUB_CLIENT_ID=${githubClientId}`);
+    envContent = envContent.replace(/GITHUB_CLIENT_SECRET=.*/g, `GITHUB_CLIENT_SECRET=${githubClientSecret}`);
+    envContent = envContent.replace(/GITHUB_CALLBACK_URL=.*/g, `GITHUB_CALLBACK_URL=${githubCallbackUrl}`);
+    
+    await fs.writeFile(envPath, envContent);
+    
+    // Atualizar variáveis de ambiente em memória
+    process.env.SERVER_IP = serverIp;
+    process.env.BASE_DOMAIN = baseDomain;
+    process.env.FRONTEND_URL = frontendUrl;
+    process.env.GITHUB_CLIENT_ID = githubClientId;
+    process.env.GITHUB_CLIENT_SECRET = githubClientSecret;
+    process.env.GITHUB_CALLBACK_URL = githubCallbackUrl;
+    
+    res.json({ message: 'Configurações atualizadas com sucesso', settings });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reiniciar servidor
+router.post('/restart', async (req: AuthRequest, res) => {
+  try {
+    res.json({ message: 'Servidor reiniciando...' });
+    
+    // Reiniciar após 2 segundos
+    setTimeout(() => {
+      process.exit(0);
+    }, 2000);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

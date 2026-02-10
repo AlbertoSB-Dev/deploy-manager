@@ -75,10 +75,47 @@ deploy-manager/
 
 ## 🚀 Instalação do Painel
 
-### Com Docker (Recomendado)
+### Instalação Automática (Recomendado)
 
 ```bash
-git clone https://github.com/seu-usuario/deploy-manager.git
+# Clone o repositório
+git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
+cd deploy-manager
+
+# Execute o instalador
+chmod +x install.sh
+sudo ./install.sh
+```
+
+O instalador irá:
+- ✅ Atualizar o sistema
+- ✅ Instalar Docker e Docker Compose
+- ✅ Instalar Node.js 20
+- ✅ Instalar MongoDB
+- ✅ Instalar e configurar Traefik
+- ✅ Configurar firewall
+- ✅ Criar diretórios necessários
+- ✅ Gerar secrets de segurança
+- ✅ Instalar dependências do projeto
+
+Após a instalação:
+```bash
+# Inicie o backend
+cd backend && npm run dev
+
+# Inicie o frontend (em outro terminal)
+cd frontend && npm run dev
+
+# Crie o primeiro usuário admin
+cd backend && node scripts/make-admin-auto.js
+```
+
+Acesse: http://SEU_IP:8000
+
+### Com Docker (Alternativa)
+
+```bash
+git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
 cd deploy-manager
 docker-compose up -d
 ```

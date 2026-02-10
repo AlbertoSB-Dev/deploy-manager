@@ -77,6 +77,12 @@ export default function AdminDashboard() {
             </div>
             <div className="flex gap-3">
               <Link
+                href="/admin/settings"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              >
+                Configurações
+              </Link>
+              <Link
                 href="/admin/users"
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
