@@ -108,14 +108,36 @@ Após 2-3 minutos, acesse:
 
 O Deploy Manager possui um sistema de atualização integrado que permite atualizar o painel diretamente do GitHub:
 
+### Notificações de Atualização
+
+- **Verificação automática** - O sistema verifica se há atualizações ao carregar a página de configurações
+- **Banner de alerta** - Quando há atualizações, um banner amarelo destaca as mudanças disponíveis
+- **Detalhes da atualização** - Mostra quantos commits estão disponíveis e a mensagem do último commit
+
+### Atualização do Sistema
+
 1. Acesse **Admin > Configurações**
-2. Na seção "Versão do Sistema", clique em **"Atualizar Sistema"**
-3. O sistema irá:
+2. Se houver atualizações, clique em **"Atualizar Agora"** no banner
+3. Ou clique em **"Atualizar Sistema"** na seção de versão
+4. O sistema irá:
    - Fazer backup do .env
    - Baixar atualizações do GitHub
    - Instalar dependências
    - Reconstruir containers
    - Reiniciar automaticamente
+
+### Controle de Versões
+
+- **Histórico completo** - Veja todas as versões disponíveis (Git tags)
+- **Rollback com um clique** - Volte para qualquer versão anterior
+- **Informações detalhadas** - Cada versão mostra tag, commit, data e descrição
+
+**Como fazer rollback:**
+1. Acesse **Admin > Configurações**
+2. Clique no ícone de histórico na seção "Versão do Sistema"
+3. Encontre a versão desejada
+4. Clique no botão de rollback
+5. Confirme e aguarde a reinicialização
 
 **Informações exibidas:**
 - Versão atual
@@ -123,6 +145,9 @@ O Deploy Manager possui um sistema de atualização integrado que permite atuali
 - Commit atual
 - Última atualização
 - Uptime do sistema
+- Notificação de novas versões
+
+📚 **Documentação completa:** [VERSION-CONTROL.md](./VERSION-CONTROL.md)
 
 ## 🌐 Domínios Automáticos
 
@@ -298,6 +323,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8001/api
 ## 📚 Documentação
 
 - 📖 [Guia de Início Rápido](./QUICK-START.md)
+- 🔄 [Sistema de Controle de Versões](./VERSION-CONTROL.md)
 - 🔐 [Repositórios Privados](./docs/PRIVATE-REPOS.md)
 - 🔑 [GitHub OAuth Setup](./docs/GITHUB-OAUTH-SETUP.md)
 - 🐳 [Integração Docker](./docs/DOCKER-INTEGRATION.md)
@@ -312,6 +338,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8001/api
 - [x] Terminal interativo
 - [x] GitHub OAuth
 - [x] Deploy remoto via SSH
+- [x] Sistema de atualização automática
+- [x] Notificações de novas versões
+- [x] Controle de versões com rollback
 - [ ] SSL/HTTPS automático com Let's Encrypt
 - [ ] Webhooks do GitHub
 - [ ] Monitoramento de recursos
