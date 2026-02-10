@@ -1,4 +1,4 @@
-# 🚀 Deploy Manager
+# 🚀 Ark Deploy
 
 Painel centralizado para gerenciar servidores VPS via SSH. Configure, faça deploy e monitore múltiplos servidores sem instalar nada neles. Tudo automatizado.
 
@@ -25,7 +25,7 @@ Painel centralizado para gerenciar servidores VPS via SSH. Configure, faça depl
 ## 🏗️ Arquitetura
 
 ```
-deploy-manager/
+ark-deploy/
 ├── backend/          # API Node.js + Express + MongoDB
 ├── frontend/         # Interface Next.js + React
 ├── docs/             # Documentação
@@ -65,7 +65,7 @@ deploy-manager/
 
 ## 📋 Pré-requisitos
 
-**Para o Painel (Deploy Manager):**
+**Para o Painel (Ark Deploy):**
 - Node.js 18+
 - MongoDB
 - Git
@@ -79,8 +79,8 @@ deploy-manager/
 
 ```bash
 # Clone e instale TUDO automaticamente
-git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
-cd deploy-manager
+git clone https://github.com/AlbertoSB-Dev/ark-deploy.git
+cd ark-deploy
 chmod +x install.sh
 sudo ./install.sh
 ```
@@ -96,7 +96,7 @@ sudo ./install.sh
 
 Após 2-3 minutos, acesse: 
 - **http://SEU_IP:8000** (acesso direto)
-- **http://deploy-manager.SEU_IP.sslip.io** (via Traefik)
+- **http://ark-deploy.SEU_IP.sslip.io** (via Traefik)
 
 **Credenciais padrão:**
 - Email: `admin@admin.com`
@@ -106,7 +106,7 @@ Após 2-3 minutos, acesse:
 
 ## 🔄 Sistema de Atualização
 
-O Deploy Manager possui um sistema de atualização integrado que permite atualizar o painel diretamente do GitHub:
+O Ark Deploy possui um sistema de atualização integrado que permite atualizar o painel diretamente do GitHub:
 
 ### Notificações de Atualização
 
@@ -153,7 +153,7 @@ O Deploy Manager possui um sistema de atualização integrado que permite atuali
 
 O painel utiliza **sslip.io** para gerar domínios automáticos:
 
-- **Painel:** `deploy-manager.SEU_IP.sslip.io`
+- **Painel:** `ark-deploy.SEU_IP.sslip.io`
 - **Projetos:** `nome-projeto.SEU_IP.sslip.io`
 
 Você pode configurar seu próprio domínio em **Admin > Configurações**.
@@ -168,8 +168,8 @@ Você pode configurar seu próprio domínio em **Admin > Configurações**.
 
 ```bash
 # Clone o repositório
-git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
-cd deploy-manager
+git clone https://github.com/AlbertoSB-Dev/ark-deploy.git
+cd ark-deploy
 
 # Execute o instalador Docker
 chmod +x install-docker.sh
@@ -199,8 +199,8 @@ Instala diretamente no servidor sem Docker.
 
 ```bash
 # Clone o repositório
-git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
-cd deploy-manager
+git clone https://github.com/AlbertoSB-Dev/ark-deploy.git
+cd ark-deploy
 
 # Execute o instalador
 chmod +x install.sh
@@ -290,7 +290,7 @@ npm run dev
 
 ```env
 PORT=8001
-MONGODB_URI=mongodb://localhost:27017/deploy-manager
+MONGODB_URI=mongodb://localhost:27017/ark-deploy
 JWT_SECRET=your-secret-key
 PROJECTS_DIR=/var/www/projects
 NODE_ENV=development

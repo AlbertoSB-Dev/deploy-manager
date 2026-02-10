@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O Deploy Manager agora possui um sistema completo de atualização automática que permite atualizar o painel diretamente do GitHub, similar ao sistema de deploy de projetos.
+O Ark Deploy agora possui um sistema completo de atualização automática que permite atualizar o painel diretamente do GitHub, similar ao sistema de deploy de projetos.
 
 ## ✨ Funcionalidades Implementadas
 
@@ -10,15 +10,15 @@ O Deploy Manager agora possui um sistema completo de atualização automática q
 
 O painel agora é acessível através de um domínio automático:
 - **Acesso direto:** `http://SEU_IP:8000`
-- **Via Traefik:** `http://deploy-manager.SEU_IP.sslip.io`
+- **Via Traefik:** `http://ark-deploy.SEU_IP.sslip.io`
 
 Configurado no `docker-compose.yml` com labels do Traefik:
 ```yaml
 labels:
   - "traefik.enable=true"
-  - "traefik.http.routers.deploy-manager.rule=Host(`deploy-manager.${SERVER_IP}.sslip.io`)"
-  - "traefik.http.routers.deploy-manager.entrypoints=web"
-  - "traefik.http.services.deploy-manager.loadbalancer.server.port=3000"
+  - "traefik.http.routers.ark-deploy.rule=Host(`ark-deploy.${SERVER_IP}.sslip.io`)"
+  - "traefik.http.routers.ark-deploy.entrypoints=web"
+  - "traefik.http.services.ark-deploy.loadbalancer.server.port=3000"
 ```
 
 ### 2. Informações do Sistema

@@ -4,7 +4,7 @@ services:
   # MongoDB
   mongodb:
     image: mongo:7.0
-    container_name: deploy-manager-mongodb
+    container_name: ark-deploy-mongodb
     restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
@@ -12,7 +12,7 @@ services:
     volumes:
       - mongodb_data:/data/db
     networks:
-      - deploy-manager-network
+      - ark-deploy-network
     ports:
       - "27017:27017"
 
@@ -21,11 +21,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: deploy-manager-backend
+    container_name: ark-deploy-backend
     restart: unless-stopped
     environment:
       PORT: 8001
-      MONGODB_URI: mongodb://admin:${MONGO_PASSWORD:-changeme123}@mongodb:27017/deploy-manager?authSource=admin
+      MONGODB_URI: mongodb://admin:${MONGO_PASSWORD:-changeme123}@mongodb:27017/ark-deploy?authSource=admin
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-encryption-key-32-chars-min}
       PROJECTS_DIR: /opt/projects
@@ -44,7 +44,7 @@ services:
       - ./backend:/app
       - /app/node_modules
     networks:
-      - deploy-manager-network
+      - ark-deploy-network
       - coolify  # Conectar à rede do Traefik
     ports:
       - "8001:8001"
@@ -57,7 +57,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: deploy-manager-frontend
+    container_name: ark-deploy-frontend
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://backend:8001
@@ -67,22 +67,22 @@ services:
       - /app/node_modules
       - /app/.next
     networks:
-      - deploy-manager-network
+      - ark-deploy-network
       - coolify
     ports:
       - "8000:3000"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.deploy-manager.rule=Host(`deploy-manager.${SERVER_IP:-localhost}.sslip.io`)"
-      - "traefik.http.routers.deploy-manager.entrypoints=web"
-      - "traefik.http.services.deploy-manager.loadbalancer.server.port=3000"
+      - "traefik.http.routers.ark-deploy.rule=Host(`ark-deploy.${SERVER_IP:-localhost}.sslip.io`)"
+      - "traefik.http.routers.ark-deploy.entrypoints=web"
+      - "traefik.http.services.ark-deploy.loadbalancer.server.port=3000"
       - "traefik.docker.network=coolify"
     depends_on:
       - backend
     command: npm run dev
 
 networks:
-  deploy-manager-network:
+  ark-deploy-network:
     driver: bridge
   coolify:
     external: true  # Usar rede existente do Traefik

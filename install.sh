@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Deploy Manager - Instalação Completa Automatizada
+# Ark Deploy - Instalação Completa Automatizada
 # Este script instala TUDO e deixa rodando em Docker
 
 set -e
 
-echo "🚀 Deploy Manager - Instalação Completa"
+echo "🚀 Ark Deploy - Instalação Completa"
 echo "========================================"
 echo ""
 
@@ -186,7 +186,7 @@ echo "📋 Informações do Sistema:"
 echo ""
 echo "🌐 Acesse o painel:"
 echo "   http://$PUBLIC_IP:8000"
-echo "   http://deploy-manager.$PUBLIC_IP.sslip.io (via Traefik)"
+echo "   http://ark-deploy.$PUBLIC_IP.sslip.io (via Traefik)"
 echo ""
 echo "👤 Credenciais padrão:"
 echo "   Email: admin@admin.com"
@@ -217,5 +217,5 @@ echo ""
 echo "📚 Documentação: README.md"
 echo "🐛 Problemas? Verifique os logs: docker-compose logs"
 echo ""
-print_success "Deploy Manager está rodando! 🚀"
+print_success "Ark Deploy está rodando! 🚀"
 echo ""

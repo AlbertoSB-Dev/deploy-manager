@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O Deploy Manager agora possui um sistema completo de controle de versões que permite:
+O Ark Deploy agora possui um sistema completo de controle de versões que permite:
 - ✅ **Notificações de atualizações** - Alerta quando há nova versão no GitHub
 - ✅ **Histórico de versões** - Lista todas as versões disponíveis (Git tags)
 - ✅ **Rollback** - Voltar para qualquer versão anterior com um clique

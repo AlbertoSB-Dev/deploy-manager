@@ -1,7 +1,7 @@
 {
-  "name": "deploy-manager",
+  "name": "ark-deploy",
   "version": "1.0.0",
-  "description": "Sistema de gerenciamento de deploy multi-projeto",
+  "description": "Ark Deploy - Sistema de gerenciamento de deploy multi-projeto",
   "scripts": {
     "install:all": "npm install --prefix backend && npm install --prefix frontend",
     "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
