@@ -13,14 +13,17 @@ WORKDIR /app/backend
 # Copiar package files do backend
 COPY backend/package*.json ./
 
-# Instalar dependências
-RUN npm ci --only=production
+# Instalar TODAS as dependências (incluindo devDependencies para build)
+RUN npm ci
 
 # Copiar código do backend
 COPY backend/ ./
 
 # Build TypeScript
 RUN npm run build
+
+# Remover devDependencies após build
+RUN npm prune --production
 
 # ============================================
 # Stage 2: Build Frontend
