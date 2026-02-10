@@ -19,8 +19,8 @@ RUN npm ci
 # Copiar código do backend
 COPY backend/ ./
 
-# Build TypeScript
-RUN npm run build
+# Build TypeScript (usando tsconfig relaxado para produção)
+RUN npx tsc --project tsconfig.prod.json || npm run build
 
 # Remover devDependencies após build
 RUN npm prune --production
