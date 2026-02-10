@@ -7,7 +7,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Deploy Manager',
+  title: 'Ark Deploy',
   description: 'Sistema de gerenciamento de deploy multi-projeto',
 };
 

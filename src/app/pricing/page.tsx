@@ -26,7 +26,7 @@ export default function PricingPage() {
               <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl">
                 <Zap className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white">Deploy Manager</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-white">Ark Deploy</span>
             </Link>
             <div className="flex gap-4">
               <Link
