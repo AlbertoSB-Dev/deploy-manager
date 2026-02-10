@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Save, Globe, Key, Server, RefreshCw, Download, GitBranch, Package } from 'lucide-react';
+import { Settings, Save, Globe, Key, Server, RefreshCw, Download, GitBranch, Package, AlertCircle, History, RotateCcw } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -15,10 +15,32 @@ interface SystemInfo {
   uptime: number;
 }
 
+interface UpdateInfo {
+  hasUpdates: boolean;
+  localCommit: string;
+  remoteCommit: string;
+  updateInfo?: {
+    commitsAhead: number;
+    latestCommit: string;
+    latestCommitMessage: string;
+    latestCommitDate: string;
+  };
+}
+
+interface Version {
+  tag: string;
+  commit: string;
+  date: string;
+  message: string;
+}
+
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [showVersions, setShowVersions] = useState(false);
   const [settings, setSettings] = useState({
     serverIp: '',
     baseDomain: '',
@@ -31,6 +53,8 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     loadSettings();
     loadSystemInfo();
+    checkUpdates();
+    loadVersions();
   }, []);
 
   const loadSettings = async () => {
@@ -48,6 +72,24 @@ export default function AdminSettingsPage() {
       setSystemInfo(response.data);
     } catch (error: any) {
       console.error('Erro ao carregar info do sistema:', error);
+    }
+  };
+
+  const checkUpdates = async () => {
+    try {
+      const response = await api.get('/admin/check-updates');
+      setUpdateInfo(response.data);
+    } catch (error: any) {
+      console.error('Erro ao verificar atualizações:', error);
+    }
+  };
+
+  const loadVersions = async () => {
+    try {
+      const response = await api.get('/admin/versions');
+      setVersions(response.data.versions || []);
+    } catch (error: any) {
+      console.error('Erro ao carregar versões:', error);
     }
   };
 
@@ -92,6 +134,29 @@ export default function AdminSettingsPage() {
       }, 10000);
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Erro ao atualizar sistema', { id: 'update' });
+      setUpdating(false);
+    }
+  };
+
+  const handleRollback = async (version: string) => {
+    if (!confirm(`Deseja fazer rollback para a versão ${version}?\n\nO sistema será reiniciado automaticamente.`)) {
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      toast.loading(`Fazendo rollback para ${version}...`, { id: 'rollback' });
+      
+      await api.post('/admin/rollback', { version });
+      
+      toast.success('Rollback concluído! Reiniciando...', { id: 'rollback' });
+      
+      // Aguardar reinicialização
+      setTimeout(() => {
+        window.location.reload();
+      }, 10000);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Erro ao fazer rollback', { id: 'rollback' });
       setUpdating(false);
     }
   };
@@ -287,13 +352,56 @@ export default function AdminSettingsPage() {
 
           {/* Sidebar com Informações */}
           <div className="space-y-6">
+            {/* Alerta de Atualização Disponível */}
+            {updateInfo?.hasUpdates && (
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-2xl p-6 shadow-lg">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-yellow-900 dark:text-yellow-300 mb-2">
+                      🎉 Nova Versão Disponível!
+                    </h3>
+                    <p className="text-sm text-yellow-800 dark:text-yellow-300 mb-3">
+                      {updateInfo.updateInfo?.commitsAhead} {updateInfo.updateInfo?.commitsAhead === 1 ? 'atualização' : 'atualizações'} disponível
+                    </p>
+                    <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 mb-3">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Última mudança:</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {updateInfo.updateInfo?.latestCommitMessage}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {updateInfo.updateInfo?.latestCommitDate && new Date(updateInfo.updateInfo.latestCommitDate).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleUpdate}
+                      disabled={updating}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 transition disabled:opacity-50 font-medium shadow-md"
+                    >
+                      <Download className="w-4 h-4" />
+                      {updating ? 'Atualizando...' : 'Atualizar Agora'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Informações do Sistema */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  Versão do Sistema
-                </h3>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Versão do Sistema
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowVersions(!showVersions)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                  title="Ver histórico de versões"
+                >
+                  <History className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </button>
               </div>
 
               {systemInfo ? (
@@ -338,15 +446,65 @@ export default function AdminSettingsPage() {
                 </div>
               )}
 
-              <button
-                onClick={handleUpdate}
-                disabled={updating}
-                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50 font-medium"
-              >
-                <Download className="w-4 h-4" />
-                {updating ? 'Atualizando...' : 'Atualizar Sistema'}
-              </button>
+              {!updateInfo?.hasUpdates && (
+                <button
+                  onClick={handleUpdate}
+                  disabled={updating}
+                  className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50 font-medium"
+                >
+                  <Download className="w-4 h-4" />
+                  {updating ? 'Atualizando...' : 'Atualizar Sistema'}
+                </button>
+              )}
             </div>
+
+            {/* Histórico de Versões */}
+            {showVersions && versions.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <History className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Histórico de Versões
+                  </h3>
+                </div>
+
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {versions.map((version) => (
+                    <div
+                      key={version.tag}
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-bold text-gray-900 dark:text-white">
+                              {version.tag}
+                            </span>
+                            <span className="text-xs font-mono text-gray-500 dark:text-gray-400">
+                              {version.commit}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            {version.message}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            {new Date(version.date).toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleRollback(version.tag)}
+                          disabled={updating}
+                          className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition disabled:opacity-50"
+                          title="Voltar para esta versão"
+                        >
+                          <RotateCcw className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Status do Sistema */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
