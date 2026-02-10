@@ -1,24 +1,29 @@
-FROM node:22-alpine
+FROM node:20-alpine
 
+# Instalar dependências do sistema
+RUN apk add --no-cache \
+    openssh-client \
+    git \
+    bash \
+    curl
+
+# Criar diretório da aplicação
 WORKDIR /app
 
-# Install git
-RUN apk add --no-cache git
-
-# Copy package files
+# Copiar package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Instalar dependências
+RUN npm ci --only=production
 
-# Copy source code
+# Copiar código fonte
 COPY . .
 
-# Build TypeScript
-RUN npm run build
+# Criar diretórios necessários
+RUN mkdir -p /opt/projects /opt/databases /opt/backups
 
-# Expose port
-EXPOSE 5000
+# Expor porta
+EXPOSE 8001
 
-# Start application
+# Comando padrão
 CMD ["npm", "start"]
