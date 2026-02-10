@@ -10,6 +10,7 @@ interface CreateDatabaseConfig {
   type: DatabaseType;
   version: string;
   serverId: string;
+  userId?: string;
 }
 
 export class DatabaseService {
@@ -125,11 +126,15 @@ export class DatabaseService {
         const apiDomain = `minio-api-${name}.${server?.host}.sslip.io`;
         const consoleDomain = `minio-console-${name}.${server?.host}.sslip.io`;
         
+        // Detectar rede do Traefik dinamicamente
+        const { TraefikService } = await import('./TraefikService');
+        const networkName = 'coolify'; // Usar coolify por padrão para servidores remotos
+        
         return `
           docker run -d \
             --name ${name} \
             --restart unless-stopped \
-            --network traefik-network \
+            --network ${networkName} \
             --label "traefik.enable=true" \
             --label "traefik.http.routers.${name}-api.rule=Host(\\\`${apiDomain}\\\`)" \
             --label "traefik.http.routers.${name}-api.service=${name}-api" \
@@ -245,6 +250,15 @@ export class DatabaseService {
       emitLog(`🐳 Criando container Docker...`, 'info');
       emitLog(`📦 Tipo: ${config.type.toUpperCase()} v${config.version}`, 'info');
       
+      // Verificar se container já existe e remover
+      emitLog(`🔍 Verificando se container já existe...`, 'info');
+      const checkResult = await ssh.execCommand(`docker ps -a --filter "name=^/${config.name}$" --format "{{.ID}}"`);
+      if (checkResult.stdout.trim()) {
+        emitLog(`⚠️  Container existente encontrado, removendo...`, 'warning');
+        await ssh.execCommand(`docker rm -f ${config.name}`);
+        emitLog(`✅ Container antigo removido`, 'success');
+      }
+      
       const dockerCommand = await this.generateDockerCommand(config, username, password, database);
       const result = await ssh.execCommand(dockerCommand);
 
@@ -299,6 +313,7 @@ export class DatabaseService {
         volumePath,
         status: 'running',
         connectionString,
+        userId: config.userId, // Adicionar userId
         ...minioData
       });
 
