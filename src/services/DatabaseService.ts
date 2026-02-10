@@ -45,12 +45,12 @@ export class DatabaseService {
   /**
    * Gerar comando Docker para criar banco
    */
-  private generateDockerCommand(
+  private async generateDockerCommand(
     config: CreateDatabaseConfig,
     username: string,
     password: string,
     database: string
-  ): string {
+  ): Promise<string> {
     const { name, type, version } = config;
     const volumePath = `/opt/databases/${name}`;
 
@@ -121,12 +121,22 @@ export class DatabaseService {
 
       case 'minio':
         const consolePort = 9001;
+        const server = await Server.findById(config.serverId);
+        const apiDomain = `minio-api-${name}.${server?.host}.sslip.io`;
+        const consoleDomain = `minio-console-${name}.${server?.host}.sslip.io`;
+        
         return `
           docker run -d \
             --name ${name} \
             --restart unless-stopped \
-            -p 9000:9000 \
-            -p ${consolePort}:9001 \
+            --network traefik-network \
+            --label "traefik.enable=true" \
+            --label "traefik.http.routers.${name}-api.rule=Host(\\\`${apiDomain}\\\`)" \
+            --label "traefik.http.routers.${name}-api.service=${name}-api" \
+            --label "traefik.http.services.${name}-api.loadbalancer.server.port=9000" \
+            --label "traefik.http.routers.${name}-console.rule=Host(\\\`${consoleDomain}\\\`)" \
+            --label "traefik.http.routers.${name}-console.service=${name}-console" \
+            --label "traefik.http.services.${name}-console.loadbalancer.server.port=9001" \
             -e MINIO_ROOT_USER=${username} \
             -e MINIO_ROOT_PASSWORD=${password} \
             -v ${volumePath}:/data \
@@ -235,7 +245,7 @@ export class DatabaseService {
       emitLog(`🐳 Criando container Docker...`, 'info');
       emitLog(`📦 Tipo: ${config.type.toUpperCase()} v${config.version}`, 'info');
       
-      const dockerCommand = this.generateDockerCommand(config, username, password, database);
+      const dockerCommand = await this.generateDockerCommand(config, username, password, database);
       const result = await ssh.execCommand(dockerCommand);
 
       if (result.code !== 0) {
@@ -267,7 +277,8 @@ export class DatabaseService {
         consolePort: 9001,
         accessKey: username,
         secretKey: password,
-        consoleUrl: `http://${server.host}:9001`
+        apiUrl: `http://minio-api-${config.name}.${server.host}.sslip.io`,
+        consoleUrl: `http://minio-console-${config.name}.${server.host}.sslip.io`
       } : {};
 
       // 9. Salvar no banco

@@ -22,7 +22,17 @@ export interface IDatabase extends Document {
   consolePort?: number;
   accessKey?: string;
   secretKey?: string;
-  consoleUrl?: string;
+  apiUrl?: string;      // Para MinIO: API S3
+  consoleUrl?: string;  // Para MinIO: Console Web
+  // Painel administrativo
+  adminPanel?: {
+    enabled: boolean;
+    type: 'phpmyadmin' | 'adminer' | 'mongo-express' | 'redis-commander' | 'minio-console';
+    containerId?: string;
+    domain?: string;
+    port?: number;
+  };
+  adminUrl?: string;    // URL do painel admin (phpMyAdmin, Adminer, etc)
   userId: string; // ID do usuário dono do banco
   createdAt: Date;
   updatedAt: Date;
@@ -48,7 +58,17 @@ const DatabaseSchema = new Schema<IDatabase>({
   consolePort: { type: Number },
   accessKey: { type: String },
   secretKey: { type: String },
+  apiUrl: { type: String },
   consoleUrl: { type: String },
+  // Painel administrativo
+  adminPanel: {
+    enabled: { type: Boolean, default: false },
+    type: { type: String, enum: ['phpmyadmin', 'adminer', 'mongo-express', 'redis-commander', 'minio-console'] },
+    containerId: { type: String },
+    domain: { type: String },
+    port: { type: Number }
+  },
+  adminUrl: { type: String },
   userId: { type: String, required: true, index: true }, // ID do usuário dono
 }, {
   timestamps: true

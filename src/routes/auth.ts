@@ -7,6 +7,23 @@ import { protect, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+// Função para validar senha forte
+function validatePassword(password: string): { valid: boolean; error?: string } {
+  if (password.length < 8) {
+    return { valid: false, error: 'Senha deve ter no mínimo 8 caracteres' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, error: 'Senha deve conter pelo menos uma letra maiúscula' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, error: 'Senha deve conter pelo menos uma letra minúscula' };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, error: 'Senha deve conter pelo menos um número' };
+  }
+  return { valid: true };
+}
+
 // Configuração OAuth GitHub
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || '';
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || '';
@@ -40,10 +57,11 @@ router.post('/register', async (req: Request, res: Response) => {
       });
     }
 
-    if (password.length < 6) {
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
       return res.status(400).json({
         success: false,
-        error: 'Senha deve ter no mínimo 6 caracteres.',
+        error: passwordValidation.error,
       });
     }
 
@@ -222,7 +240,7 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
       .digest('hex');
 
     user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
+    user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
     await user.save();
 
     // TODO: Enviar email com link de recuperação
@@ -235,8 +253,6 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
     res.json({
       success: true,
       message: 'Se o email existir, você receberá instruções para recuperação.',
-      // Em desenvolvimento, retornar o token
-      ...(process.env.NODE_ENV === 'development' && { resetToken }),
     });
   } catch (error: any) {
     console.error('Erro ao solicitar recuperação:', error);
@@ -262,10 +278,11 @@ router.post('/reset-password/:token', async (req: Request, res: Response) => {
       });
     }
 
-    if (password.length < 6) {
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
       return res.status(400).json({
         success: false,
-        error: 'Senha deve ter no mínimo 6 caracteres.',
+        error: passwordValidation.error,
       });
     }
 
@@ -502,10 +519,11 @@ router.put('/change-password', protect, async (req: AuthRequest, res: Response) 
       });
     }
 
-    if (newPassword.length < 6) {
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.valid) {
       return res.status(400).json({
         success: false,
-        error: 'Nova senha deve ter no mínimo 6 caracteres.',
+        error: passwordValidation.error,
       });
     }
 

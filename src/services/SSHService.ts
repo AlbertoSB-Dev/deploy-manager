@@ -23,10 +23,11 @@ class SSHService {
         keepaliveInterval: 10000
       };
 
+      // Usar métodos de descriptografia para obter credenciais
       if (server.authType === 'password') {
-        config.password = server.password;
+        config.password = server.getPassword();
       } else if (server.authType === 'key') {
-        config.privateKey = server.privateKey;
+        config.privateKey = server.getPrivateKey();
       }
 
       await ssh.connect(config);

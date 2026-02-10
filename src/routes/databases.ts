@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { databaseService } from '../services/DatabaseService';
+import { adminPanelService } from '../services/AdminPanelService';
 import { dockerVersionService } from '../services/DockerVersionService';
 import { protect, AuthRequest } from '../middleware/auth';
 
@@ -137,6 +138,29 @@ router.delete('/:id', async (req, res) => {
     await databaseService.deleteDatabase(req.params.id);
     res.json({ message: 'Banco de dados deletado com sucesso' });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Criar painel administrativo
+router.post('/:id/admin-panel', async (req, res) => {
+  try {
+    const io = req.app.get('io');
+    await adminPanelService.createAdminPanel(req.params.id, io);
+    res.json({ message: 'Painel administrativo criado com sucesso' });
+  } catch (error: any) {
+    console.error('Erro ao criar painel admin:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Deletar painel administrativo
+router.delete('/:id/admin-panel', async (req, res) => {
+  try {
+    await adminPanelService.deleteAdminPanel(req.params.id);
+    res.json({ message: 'Painel administrativo deletado com sucesso' });
+  } catch (error: any) {
+    console.error('Erro ao deletar painel admin:', error);
     res.status(500).json({ error: error.message });
   }
 });

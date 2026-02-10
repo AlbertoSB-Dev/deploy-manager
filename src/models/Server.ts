@@ -1,4 +1,33 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import crypto from 'crypto';
+
+// Chave de criptografia (deve estar no .env em produção)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-character-secret-key!!'; // Deve ter 32 caracteres
+const ALGORITHM = 'aes-256-cbc';
+
+// Função para criptografar
+function encrypt(text: string): string {
+  if (!text) return '';
+  const iv = crypto.randomBytes(16);
+  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  return iv.toString('hex') + ':' + encrypted;
+}
+
+// Função para descriptografar
+function decrypt(text: string): string {
+  if (!text) return '';
+  const parts = text.split(':');
+  const iv = Buffer.from(parts[0], 'hex');
+  const encryptedText = parts[1];
+  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
 
 export interface IServer extends Document {
   name: string;
@@ -8,6 +37,10 @@ export interface IServer extends Document {
   authType: 'password' | 'key';
   password?: string;
   privateKey?: string;
+  
+  // Métodos para obter credenciais descriptografadas
+  getPassword(): string;
+  getPrivateKey(): string;
   
   // Status de provisioning
   provisioningStatus: 'pending' | 'provisioning' | 'ready' | 'error';
@@ -38,6 +71,7 @@ export interface IServer extends Document {
   lastCheck: Date;
   projects: string[];
   userId: string; // ID do usuário dono do servidor
+  groupId?: string; // ID do grupo ao qual o servidor pertence
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,8 +82,8 @@ const ServerSchema = new Schema<IServer>({
   port: { type: Number, default: 22 },
   username: { type: String, required: true },
   authType: { type: String, enum: ['password', 'key'], default: 'password' },
-  password: { type: String },
-  privateKey: { type: String },
+  password: { type: String }, // Será criptografado
+  privateKey: { type: String }, // Será criptografado
   
   provisioningStatus: { 
     type: String, 
@@ -86,12 +120,43 @@ const ServerSchema = new Schema<IServer>({
   },
   lastCheck: { type: Date },
   projects: [{ type: String }],
-  userId: { type: String, required: true, index: true } // ID do usuário dono
+  userId: { type: String, required: true, index: true }, // ID do usuário dono
+  groupId: { type: String, index: true } // ID do grupo ao qual o servidor pertence
 }, {
   timestamps: true
 });
+
+// Middleware para criptografar antes de salvar
+ServerSchema.pre('save', function(next) {
+  if (this.isModified('password') && this.password) {
+    this.password = encrypt(this.password);
+  }
+  if (this.isModified('privateKey') && this.privateKey) {
+    this.privateKey = encrypt(this.privateKey);
+  }
+  next();
+});
+
+// Método para obter senha descriptografada
+ServerSchema.methods.getPassword = function(): string {
+  return this.password ? decrypt(this.password) : '';
+};
+
+// Método para obter chave privada descriptografada
+ServerSchema.methods.getPrivateKey = function(): string {
+  return this.privateKey ? decrypt(this.privateKey) : '';
+};
+
+// Remover credenciais do JSON quando retornar para o frontend
+ServerSchema.methods.toJSON = function() {
+  const obj = this.toObject();
+  delete obj.password;
+  delete obj.privateKey;
+  return obj;
+};
 
 // Índice composto: nome único por usuário
 ServerSchema.index({ name: 1, userId: 1 }, { unique: true });
 
 export const Server = mongoose.model<IServer>('Server', ServerSchema);
+
