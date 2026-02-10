@@ -68,8 +68,15 @@ services:
       - /app/.next
     networks:
       - deploy-manager-network
+      - coolify
     ports:
       - "8000:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.deploy-manager.rule=Host(`deploy-manager.${SERVER_IP:-localhost}.sslip.io`)"
+      - "traefik.http.routers.deploy-manager.entrypoints=web"
+      - "traefik.http.services.deploy-manager.loadbalancer.server.port=3000"
+      - "traefik.docker.network=coolify"
     depends_on:
       - backend
     command: npm run dev

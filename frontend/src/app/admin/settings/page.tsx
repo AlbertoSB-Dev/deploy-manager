@@ -1,12 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Save, Globe, Key, Server, RefreshCw } from 'lucide-react';
+import { Settings, Save, Globe, Key, Server, RefreshCw, Download, GitBranch, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+interface SystemInfo {
+  version: string;
+  gitCommit: string;
+  gitBranch: string;
+  lastUpdate: string | null;
+  nodeVersion: string;
+  platform: string;
+  uptime: number;
+}
+
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [settings, setSettings] = useState({
     serverIp: '',
     baseDomain: '',
@@ -18,6 +30,7 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     loadSettings();
+    loadSystemInfo();
   }, []);
 
   const loadSettings = async () => {
@@ -29,6 +42,25 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const loadSystemInfo = async () => {
+    try {
+      const response = await api.get('/admin/system-info');
+      setSystemInfo(response.data);
+    } catch (error: any) {
+      console.error('Erro ao carregar info do sistema:', error);
+    }
+  };
+
+  const formatUptime = (seconds: number) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -38,6 +70,29 @@ export default function AdminSettingsPage() {
       toast.error(error.response?.data?.error || 'Erro ao salvar configurações');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!confirm('Deseja atualizar o Deploy Manager para a versão mais recente do GitHub?\n\nO sistema será reiniciado automaticamente.')) {
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      toast.loading('Atualizando sistema...', { id: 'update' });
+      
+      await api.post('/admin/update');
+      
+      toast.success('Sistema atualizado! Reiniciando...', { id: 'update' });
+      
+      // Aguardar reinicialização
+      setTimeout(() => {
+        window.location.reload();
+      }, 10000);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Erro ao atualizar sistema', { id: 'update' });
+      setUpdating(false);
     }
   };
 
@@ -232,6 +287,67 @@ export default function AdminSettingsPage() {
 
           {/* Sidebar com Informações */}
           <div className="space-y-6">
+            {/* Informações do Sistema */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Versão do Sistema
+                </h3>
+              </div>
+
+              {systemInfo ? (
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Versão</div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                      v{systemInfo.version}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Branch</div>
+                    <div className="text-sm font-mono text-gray-900 dark:text-white flex items-center gap-2">
+                      <GitBranch className="w-3 h-3" />
+                      {systemInfo.gitBranch}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Commit</div>
+                    <div className="text-sm font-mono text-gray-900 dark:text-white">
+                      {systemInfo.gitCommit}
+                    </div>
+                  </div>
+                  {systemInfo.lastUpdate && (
+                    <div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Última Atualização</div>
+                      <div className="text-sm text-gray-900 dark:text-white">
+                        {new Date(systemInfo.lastUpdate).toLocaleString('pt-BR')}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Uptime</div>
+                    <div className="text-sm text-gray-900 dark:text-white">
+                      {formatUptime(systemInfo.uptime)}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Carregando...
+                </div>
+              )}
+
+              <button
+                onClick={handleUpdate}
+                disabled={updating}
+                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50 font-medium"
+              >
+                <Download className="w-4 h-4" />
+                {updating ? 'Atualizando...' : 'Atualizar Sistema'}
+              </button>
+            </div>
+
             {/* Status do Sistema */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -260,6 +376,14 @@ export default function AdminSettingsPage() {
                     Rodando
                   </span>
                 </div>
+                {systemInfo && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Node.js</span>
+                    <span className="text-xs font-mono text-gray-700 dark:text-gray-300">
+                      {systemInfo.nodeVersion}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

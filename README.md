@@ -18,7 +18,9 @@ Painel centralizado para gerenciar servidores VPS via SSH. Configure, faça depl
 - ✅ **GitHub OAuth** - Conecte repositórios facilmente
 - ✅ **Repositórios privados** - SSH Key, Token ou Basic Auth
 - ✅ **Proxy reverso** - Traefik e Nginx configurados automaticamente
-- ✅ **Domínios automáticos** - Sistema gera domínios de teste
+- ✅ **Domínios automáticos** - Sistema gera domínios de teste com sslip.io
+- ✅ **Sistema de Atualização** - Atualize o painel diretamente do GitHub
+- ✅ **Gerenciamento de Versões** - Controle de versão integrado
 
 ## 🏗️ Arquitetura
 
@@ -92,13 +94,44 @@ sudo ./install.sh
 - ✅ Inicia containers Docker
 - ✅ Cria usuário admin automaticamente
 
-Após 2-3 minutos, acesse: **http://SEU_IP:8000**
+Após 2-3 minutos, acesse: 
+- **http://SEU_IP:8000** (acesso direto)
+- **http://deploy-manager.SEU_IP.sslip.io** (via Traefik)
 
 **Credenciais padrão:**
 - Email: `admin@admin.com`
 - Senha: `admin123`
 
 ⚠️ **Importante:** Altere a senha após o primeiro login!
+
+## 🔄 Sistema de Atualização
+
+O Deploy Manager possui um sistema de atualização integrado que permite atualizar o painel diretamente do GitHub:
+
+1. Acesse **Admin > Configurações**
+2. Na seção "Versão do Sistema", clique em **"Atualizar Sistema"**
+3. O sistema irá:
+   - Fazer backup do .env
+   - Baixar atualizações do GitHub
+   - Instalar dependências
+   - Reconstruir containers
+   - Reiniciar automaticamente
+
+**Informações exibidas:**
+- Versão atual
+- Branch Git
+- Commit atual
+- Última atualização
+- Uptime do sistema
+
+## 🌐 Domínios Automáticos
+
+O painel utiliza **sslip.io** para gerar domínios automáticos:
+
+- **Painel:** `deploy-manager.SEU_IP.sslip.io`
+- **Projetos:** `nome-projeto.SEU_IP.sslip.io`
+
+Você pode configurar seu próprio domínio em **Admin > Configurações**.
 
 ---
 
