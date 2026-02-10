@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, RefreshCw, Moon, Sun, LogOut, User as UserIcon, Search } from 'lucide-react';
-import { ArkLogoModern } from '@/components/ArkLogoModern';
+import { ArkLogoModern, ArkIconModern } from '@/components/ArkLogoModern';
 import { api } from '@/lib/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
