@@ -5,7 +5,7 @@ import fs from 'fs/promises';
 import Backup, { IBackup, BackupType, StorageType } from '../models/Backup';
 import Database from '../models/Database';
 import Project from '../models/Project';
-import WordPress from '../models/WordPress';
+import { WordPress } from '../models/WordPress';
 import { Server } from '../models/Server';
 import { sshService } from './SSHService';
 import { Client as MinioClient } from 'minio';

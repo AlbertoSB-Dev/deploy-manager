@@ -1,0 +1,47 @@
+# Dockerfile otimizado para Backend em Produção
+FROM node:20-alpine AS base
+
+# Instalar dependências do sistema
+RUN apk add --no-cache git openssh-client
+
+WORKDIR /app
+
+# ============================================
+# Stage 1: Dependencies
+# ============================================
+FROM base AS deps
+
+# Copiar package files
+COPY package*.json ./
+
+# Instalar dependências
+RUN npm ci
+
+# ============================================
+# Stage 2: Runtime
+# ============================================
+FROM base AS runtime
+
+# Copiar node_modules
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copiar código fonte
+COPY . .
+
+# Criar diretórios necessários
+RUN mkdir -p /opt/projects /opt/databases /opt/backups
+
+# Expor porta
+EXPOSE 8001
+
+# Variáveis de ambiente padrão
+ENV PORT=8001
+ENV NODE_ENV=production
+ENV TS_NODE_TRANSPILE_ONLY=true
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8001/api/health || exit 1
+
+# Iniciar com ts-node (transpile only para performance)
+CMD ["npx", "ts-node-dev", "--transpile-only", "--respawn", "src/index.ts"]
