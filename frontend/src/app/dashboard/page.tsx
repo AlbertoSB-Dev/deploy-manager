@@ -134,8 +134,8 @@ export default function Dashboard() {
                 <Rocket className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Deploy Manager</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors">Gerencie seus deploys com facilidade</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Ark Deploy</h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors">Seu código, salvo da tempestade</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">

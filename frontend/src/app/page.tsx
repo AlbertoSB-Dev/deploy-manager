@@ -58,7 +58,7 @@ export default function LandingPage() {
               <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg">
                 <Rocket className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">Deploy Manager</span>
+              <span className="text-2xl font-bold text-gray-900 dark:text-white">Ark Deploy</span>
             </div>
             <div className="flex items-center space-x-4">
               <Link
@@ -233,7 +233,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
-                Por que Deploy Manager?
+                Por que Ark Deploy?
               </h2>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -309,7 +309,7 @@ export default function LandingPage() {
                 <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg">
                   <Rocket className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-lg font-bold text-gray-900 dark:text-white">Deploy Manager</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-white">Ark Deploy</span>
               </div>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Painel centralizado para gerenciar servidores VPS via SSH.
@@ -340,7 +340,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 mt-8 pt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-            © 2026 Deploy Manager. Todos os direitos reservados.
+            © 2026 Ark Deploy. Todos os direitos reservados.
           </div>
         </div>
       </footer>

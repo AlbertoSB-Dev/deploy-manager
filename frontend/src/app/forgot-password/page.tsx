@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
           <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg">
             <Rocket className="w-8 h-8 text-white" />
           </div>
-          <span className="text-3xl font-bold text-gray-900 dark:text-white">Deploy Manager</span>
+          <span className="text-3xl font-bold text-gray-900 dark:text-white">Ark Deploy</span>
         </Link>
 
         {/* Card */}
