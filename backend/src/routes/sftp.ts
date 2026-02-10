@@ -274,20 +274,36 @@ router.post('/:serverId/copy', protect, verifyServerOwnership, async (req: AuthR
 // Upload de arquivo
 router.post('/:serverId/upload', protect, verifyServerOwnership, upload.single('file'), async (req: AuthRequest, res) => {
   try {
+    console.log('[SFTP Upload] Iniciando upload...');
+    console.log('[SFTP Upload] Servidor:', req.params.serverId);
+    console.log('[SFTP Upload] Body:', req.body);
+    console.log('[SFTP Upload] File:', req.file ? `${req.file.originalname} (${req.file.size} bytes)` : 'nenhum');
+    
     const { path: remotePath } = req.body;
     
-    if (!remotePath || !req.file) {
-      return res.status(400).json({ error: 'Arquivo e caminho remoto são obrigatórios' });
+    if (!remotePath) {
+      console.log('[SFTP Upload] Erro: caminho remoto não fornecido');
+      return res.status(400).json({ error: 'Caminho remoto é obrigatório' });
+    }
+    
+    if (!req.file) {
+      console.log('[SFTP Upload] Erro: arquivo não fornecido');
+      return res.status(400).json({ error: 'Arquivo é obrigatório' });
     }
 
     if (!SFTPService.validatePath(remotePath)) {
+      console.log('[SFTP Upload] Erro: caminho negado -', remotePath);
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
+    console.log('[SFTP Upload] Fazendo upload para:', remotePath);
     await SFTPService.uploadFile(req.params.serverId, req.file.buffer, remotePath);
+    console.log('[SFTP Upload] Upload concluído com sucesso');
+    
     res.json({ success: true, message: 'Upload concluído com sucesso' });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('[SFTP Upload] Erro:', error);
+    res.status(500).json({ error: error.message || 'Erro ao fazer upload' });
   }
 });
 

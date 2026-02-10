@@ -75,7 +75,27 @@ ark-deploy/
 - Ubuntu/Debian (recomendado)
 - O sistema instala Docker e dependências automaticamente
 
-## 🚀 Instalação Rápida (1 Comando!)
+## 🚀 Instalação Rápida (1 Comando)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AlbertoSB-Dev/deploy-manager/main/install-simple.sh | sudo bash
+```
+
+**OU:**
+
+```bash
+git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
+cd deploy-manager
+sudo ./install-simple.sh
+```
+
+**Pronto!** Acesse: `http://SEU_IP:8000`
+
+**Login:** admin@admin.com / admin123
+
+---
+
+## 📋 Instalação Detalhada Rápida (1 Comando!)
 
 ```bash
 # Clone e instale TUDO automaticamente

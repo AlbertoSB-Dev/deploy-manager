@@ -236,17 +236,21 @@ class SFTPServiceClass {
   }
 
   /**
-   * Upload de arquivo usando SSH
+   * Upload de arquivo usando SFTP
    */
   async uploadFile(serverId: string, localBuffer: Buffer, remotePath: string): Promise<void> {
-    return this.writeFile(serverId, remotePath, localBuffer);
-  }
-
-  /**
-   * Download de arquivo usando SSH
-   */
-  async downloadFile(serverId: string, remotePath: string): Promise<Buffer> {
-    return this.readFile(serverId, remotePath);
+    const sftp = await this.getClient(serverId);
+    
+    try {
+      console.log(`[SFTP] Fazendo upload para: ${remotePath}`);
+      await sftp.put(localBuffer, remotePath);
+      console.log(`[SFTP] Upload concluído: ${remotePath}`);
+    } catch (error: any) {
+      console.error(`[SFTP] Erro no upload: ${error.message}`);
+      throw new Error(`Erro ao fazer upload: ${error.message}`);
+    } finally {
+      await sftp.end();
+    }
   }
 
   /**
@@ -332,20 +336,7 @@ class SFTPServiceClass {
   }
 
   /**
-   * Upload de arquivo
-   */
-  async uploadFile(serverId: string, localBuffer: Buffer, remotePath: string): Promise<void> {
-    const sftp = await this.getClient(serverId);
-    
-    try {
-      await sftp.put(localBuffer, remotePath);
-    } finally {
-      await sftp.end();
-    }
-  }
-
-  /**
-   * Download de arquivo
+   * Download de arquivo usando SSH
    */
   async downloadFile(serverId: string, remotePath: string): Promise<Buffer> {
     return this.readFile(serverId, remotePath);

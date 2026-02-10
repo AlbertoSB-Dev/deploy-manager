@@ -124,7 +124,28 @@ export default function AdminSettingsPage() {
       setUpdating(true);
       toast.loading('Atualizando sistema...', { id: 'update' });
       
-      await api.post('/admin/update');
+      const response = await api.post('/admin/update');
+      
+      // Verificar se requer atualização manual (Docker)
+      if (response.data.requiresManualUpdate) {
+        toast.dismiss('update');
+        toast('Atualização manual necessária', { 
+          icon: 'ℹ️',
+          duration: 10000
+        });
+        
+        // Mostrar instruções
+        alert(response.data.message);
+        setUpdating(false);
+        return;
+      }
+      
+      // Verificar se já está atualizado
+      if (response.data.alreadyUpToDate) {
+        toast.success('Sistema já está atualizado!', { id: 'update' });
+        setUpdating(false);
+        return;
+      }
       
       toast.success('Sistema atualizado! Reiniciando...', { id: 'update' });
       
@@ -133,7 +154,9 @@ export default function AdminSettingsPage() {
         window.location.reload();
       }, 10000);
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao atualizar sistema', { id: 'update' });
+      console.error('Erro ao atualizar:', error);
+      const errorMsg = error.response?.data?.details || error.response?.data?.error || 'Erro ao atualizar sistema';
+      toast.error(errorMsg, { id: 'update', duration: 5000 });
       setUpdating(false);
     }
   };

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { ProvisioningStatusModal } from './ProvisioningStatusModal';
 
 interface AddServerModalProps {
   onClose: () => void;
@@ -23,6 +24,9 @@ export function AddServerModal({ onClose, onSuccess }: AddServerModalProps) {
     groupId: ''
   });
   const [loading, setLoading] = useState(false);
+  const [showProvisioning, setShowProvisioning] = useState(false);
+  const [newServerId, setNewServerId] = useState<string | null>(null);
+  const [newServerName, setNewServerName] = useState<string>('');
 
   // Carregar grupos ao montar
   useEffect(() => {
@@ -59,9 +63,15 @@ export function AddServerModal({ onClose, onSuccess }: AddServerModalProps) {
       setLoading(true);
       toast.loading('Adicionando servidor...', { id: 'add-server' });
       
-      await api.post('/servers', formData);
+      const response = await api.post('/servers', formData);
       
-      toast.success('Servidor adicionado! Provisioning iniciado...', { id: 'add-server' });
+      toast.success('Servidor adicionado! Iniciando provisionamento...', { id: 'add-server' });
+      
+      // Mostrar modal de provisionamento
+      setNewServerId(response.data.server._id);
+      setNewServerName(formData.name);
+      setShowProvisioning(true);
+      
       onSuccess();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Erro ao adicionar servidor', { id: 'add-server' });
@@ -69,6 +79,19 @@ export function AddServerModal({ onClose, onSuccess }: AddServerModalProps) {
       setLoading(false);
     }
   };
+
+  if (showProvisioning && newServerId) {
+    return (
+      <ProvisioningStatusModal
+        serverId={newServerId}
+        serverName={newServerName}
+        onClose={() => {
+          setShowProvisioning(false);
+          onClose();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4" onClick={onClose}>

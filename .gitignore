@@ -1,21 +1,21 @@
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
-
-# Testing
-coverage/
-
-# Production
-build/
-dist/
+*/node_modules/
+package-lock.json
+*/package-lock.json
 
 # Environment variables
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Build outputs
+dist/
+build/
+.next/
+out/
 
 # Logs
 logs/
@@ -23,7 +23,6 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
 lerna-debug.log*
 
 # OS
@@ -37,19 +36,33 @@ Thumbs.db
 *.swo
 *~
 
-# Next.js
-.next/
-out/
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# Backups
+*.backup
+.env.backup*
+
+# MongoDB
+data/
+mongo-data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Coverage
+coverage/
+.nyc_output/
 
 # TypeScript
 *.tsbuildinfo
 
-# MongoDB
-data/
+# Optional npm cache directory
+.npm
 
-# Projects directory
-projects/
-
-# Temporary files
-*.tmp
-*.temp
+# Optional eslint cache
+.eslintcache
