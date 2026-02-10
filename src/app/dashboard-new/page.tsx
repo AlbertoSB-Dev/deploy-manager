@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, RefreshCw, Moon, Sun, LogOut, User as UserIcon, Search } from 'lucide-react';
-import { ArkLogoModern, ArkIconModern } from '@/components/ArkLogoModern';
+import { ArkLogoImage, ArkIconImage } from '@/components/ArkLogoImage';
 import { api } from '@/lib/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -79,8 +79,8 @@ export default function DashboardNew() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="mb-4">
-            <ArkLogoModern size={80} showText={false} animated={true} />
+          <div className="mb-4 flex justify-center">
+            <ArkLogoImage size={80} showText={false} />
           </div>
           <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
         </div>
@@ -95,7 +95,7 @@ export default function DashboardNew() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <ArkLogoModern size={40} showText={false} />
+              <ArkIconImage size={40} />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Ark Deploy</h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors">Gerencie seus deploys com facilidade</p>
@@ -210,7 +210,7 @@ export default function DashboardNew() {
         ) : allGroups.length === 0 ? (
           <div className="text-center py-16">
             <div className="mb-6 flex justify-center">
-              <ArkIconModern size={80} />
+              <ArkIconImage size={80} />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Comece criando um grupo</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">

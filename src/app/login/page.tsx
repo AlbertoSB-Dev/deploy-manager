@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { ArkLogoModern } from '@/components/ArkLogoModern';
+import { ArkLogoImage } from '@/components/ArkLogoImage';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/router';
@@ -53,7 +53,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center mb-8">
-          <ArkLogoModern size={60} showText={true} />
+          <ArkLogoImage size={60} showText={true} />
         </Link>
 
         {/* Card */}

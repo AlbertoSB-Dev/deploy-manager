@@ -1,0 +1,82 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradiente principal -->
+    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="50%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#8B5CF6" />
+    </linearGradient>
+    
+    <!-- Sombra suave -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Círculo de fundo -->
+  <circle 
+    cx="60" 
+    cy="60" 
+    r="55" 
+    fill="url(#mainGradient)"
+    opacity="0.1"
+  />
+  
+  <!-- Forma da Arca - Estilo moderno -->
+  <path
+    d="M 30 70 L 30 45 Q 30 35 40 35 L 80 35 Q 90 35 90 45 L 90 70 Q 90 80 80 80 L 40 80 Q 30 80 30 70 Z"
+    fill="url(#mainGradient)"
+    filter="url(#glow)"
+  />
+  
+  <!-- Linha de destaque superior -->
+  <path
+    d="M 35 40 L 85 40"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    opacity="0.6"
+  />
+  
+  <!-- Seta de Deploy - Moderna -->
+  <g transform="translate(60, 50)">
+    <!-- Seta principal -->
+    <path
+      d="M 0 -15 L 0 15 M -8 -7 L 0 -15 L 8 -7"
+      stroke="white"
+      stroke-width="4"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    
+    <!-- Base da seta -->
+    <rect
+      x="-10"
+      y="12"
+      width="20"
+      height="3"
+      rx="1.5"
+      fill="white"
+    />
+  </g>
+  
+  <!-- Partículas decorativas -->
+  <circle cx="40" cy="55" r="2" fill="white" opacity="0.5"/>
+  <circle cx="48" cy="58" r="1.5" fill="white" opacity="0.4"/>
+  <circle cx="72" cy="58" r="1.5" fill="white" opacity="0.4"/>
+  <circle cx="80" cy="55" r="2" fill="white" opacity="0.5"/>
+  
+  <!-- Brilho superior -->
+  <ellipse
+    cx="60"
+    cy="38"
+    rx="20"
+    ry="3"
+    fill="white"
+    opacity="0.3"
+  />
+</svg>
