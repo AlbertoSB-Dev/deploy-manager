@@ -51,7 +51,7 @@ router.get('/:id', protect, async (req: AuthRequest, res) => {
 });
 
 // Criar novo banco de dados
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req: AuthRequest, res) => {
   try {
     const { name, displayName, type, version, serverId } = req.body;
     
@@ -81,7 +81,8 @@ router.post('/', async (req, res) => {
       displayName: displayName || name,
       type,
       version,
-      serverId
+      serverId,
+      userId: req.user?._id.toString() // Adicionar userId do usuário logado
     }, io);
 
     res.status(201).json(database);
