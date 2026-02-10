@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center mb-8">
-          <ArkLogoModern size={60} showText={true} />
+          <ArkLogoImage size={60} showText={true} />
         </Link>
 
         {/* Card */}
