@@ -413,6 +413,159 @@ router.get('/system-info', async (req: AuthRequest, res) => {
   }
 });
 
+// Verificar se há atualizações disponíveis no GitHub
+router.get('/check-updates', async (req: AuthRequest, res) => {
+  try {
+    const { execSync } = await import('child_process');
+    
+    // Buscar atualizações do remoto
+    execSync('git fetch origin', { encoding: 'utf-8' });
+    
+    // Obter commit local
+    const localCommit = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
+    
+    // Obter commit remoto
+    const remoteCommit = execSync('git rev-parse origin/main', { encoding: 'utf-8' }).trim();
+    
+    // Verificar se há diferença
+    const hasUpdates = localCommit !== remoteCommit;
+    
+    // Se houver atualizações, obter detalhes
+    let updateInfo = null;
+    if (hasUpdates) {
+      const commitCount = execSync(`git rev-list --count ${localCommit}..${remoteCommit}`, { encoding: 'utf-8' }).trim();
+      const latestCommitMsg = execSync('git log origin/main -1 --pretty=%B', { encoding: 'utf-8' }).trim();
+      const latestCommitDate = execSync('git log origin/main -1 --format=%cd --date=iso', { encoding: 'utf-8' }).trim();
+      
+      updateInfo = {
+        commitsAhead: parseInt(commitCount),
+        latestCommit: remoteCommit.substring(0, 7),
+        latestCommitMessage: latestCommitMsg,
+        latestCommitDate: new Date(latestCommitDate)
+      };
+    }
+    
+    res.json({
+      hasUpdates,
+      localCommit: localCommit.substring(0, 7),
+      remoteCommit: remoteCommit.substring(0, 7),
+      updateInfo
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao verificar atualizações:', error);
+    res.status(500).json({ 
+      error: 'Erro ao verificar atualizações',
+      details: error.message 
+    });
+  }
+});
+
+// Listar versões disponíveis (tags Git)
+router.get('/versions', async (req: AuthRequest, res) => {
+  try {
+    const { execSync } = await import('child_process');
+    
+    // Buscar tags do remoto
+    execSync('git fetch --tags', { encoding: 'utf-8' });
+    
+    // Listar todas as tags
+    const tagsOutput = execSync('git tag -l --sort=-version:refname', { encoding: 'utf-8' }).trim();
+    
+    if (!tagsOutput) {
+      return res.json({ versions: [] });
+    }
+    
+    const tags = tagsOutput.split('\n');
+    
+    // Obter detalhes de cada tag
+    const versions = tags.map(tag => {
+      try {
+        const commit = execSync(`git rev-list -n 1 ${tag}`, { encoding: 'utf-8' }).trim();
+        const date = execSync(`git log ${tag} -1 --format=%cd --date=iso`, { encoding: 'utf-8' }).trim();
+        const message = execSync(`git tag -l --format='%(contents)' ${tag}`, { encoding: 'utf-8' }).trim();
+        
+        return {
+          tag,
+          commit: commit.substring(0, 7),
+          date: new Date(date),
+          message: message || 'Sem descrição'
+        };
+      } catch (error) {
+        return null;
+      }
+    }).filter(v => v !== null);
+    
+    // Obter versão atual
+    const currentCommit = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
+    
+    res.json({
+      versions,
+      currentCommit: currentCommit.substring(0, 7)
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao listar versões:', error);
+    res.status(500).json({ 
+      error: 'Erro ao listar versões',
+      details: error.message 
+    });
+  }
+});
+
+// Fazer rollback para uma versão específica
+router.post('/rollback', async (req: AuthRequest, res) => {
+  try {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+    const { version } = req.body;
+    
+    if (!version) {
+      return res.status(400).json({ error: 'Versão não especificada' });
+    }
+    
+    console.log(`🔄 Fazendo rollback para versão ${version}...`);
+    
+    // 1. Fazer backup do .env
+    console.log('📦 Fazendo backup do .env...');
+    await execAsync('cp .env .env.backup');
+    
+    // 2. Fazer checkout da versão
+    console.log(`⬇️  Voltando para versão ${version}...`);
+    await execAsync(`git checkout ${version}`);
+    
+    // 3. Instalar dependências
+    console.log('📦 Instalando dependências...');
+    await execAsync('cd backend && npm install');
+    await execAsync('cd frontend && npm install');
+    
+    // 4. Rebuild containers
+    console.log('🐳 Reconstruindo containers...');
+    await execAsync('docker-compose build');
+    
+    // 5. Reiniciar containers
+    console.log('🔄 Reiniciando containers...');
+    await execAsync('docker-compose down');
+    await execAsync('docker-compose up -d');
+    
+    console.log('✅ Rollback concluído!');
+    
+    res.json({ 
+      message: `Rollback para versão ${version} concluído! Reiniciando...`
+    });
+    
+    // Reiniciar processo após 5 segundos
+    setTimeout(() => {
+      process.exit(0);
+    }, 5000);
+  } catch (error: any) {
+    console.error('❌ Erro ao fazer rollback:', error);
+    res.status(500).json({ 
+      error: 'Erro ao fazer rollback',
+      details: error.message 
+    });
+  }
+});
+
 // Atualizar sistema do GitHub
 router.post('/update', async (req: AuthRequest, res) => {
   try {
