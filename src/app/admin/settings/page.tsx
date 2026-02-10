@@ -116,7 +116,7 @@ export default function AdminSettingsPage() {
   };
 
   const handleUpdate = async () => {
-    if (!confirm('Deseja atualizar o Deploy Manager para a versão mais recente do GitHub?\n\nO sistema será reiniciado automaticamente.')) {
+    if (!confirm('Deseja atualizar o Ark Deploy para a versão mais recente do GitHub?\n\nO sistema será reiniciado automaticamente.')) {
       return;
     }
 
