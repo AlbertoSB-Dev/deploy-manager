@@ -106,6 +106,89 @@ export class DeployService {
       
       await ssh.execCommand(`echo "${envContent}" > ${remoteProjectPath}/.env`);
       
+      // 3.5. Verificar se existe Dockerfile, se não, criar automaticamente
+      this.emitLog(project._id.toString(), '📄 Verificando Dockerfile...');
+      logs += '📄 Verificando Dockerfile...\n';
+      
+      const dockerfileCheck = await ssh.execCommand(`test -f ${remoteProjectPath}/Dockerfile && echo "exists" || echo "missing"`);
+      
+      if (dockerfileCheck.stdout.trim() === 'missing') {
+        this.emitLog(project._id.toString(), '📝 Dockerfile não encontrado - gerando automaticamente...');
+        logs += '📝 Dockerfile não encontrado - gerando automaticamente...\n';
+        
+        // Detectar tipo de projeto
+        const packageJsonCheck = await ssh.execCommand(`test -f ${remoteProjectPath}/package.json && echo "nodejs" || echo "unknown"`);
+        const projectType = packageJsonCheck.stdout.trim() === 'nodejs' ? 'nodejs' : 'generic';
+        
+        // Gerar Dockerfile baseado no tipo
+        let dockerfileContent = '';
+        
+        if (projectType === 'nodejs') {
+          // Detectar se é Next.js, React, ou Node puro
+          const packageCheck = await ssh.execCommand(`cat ${remoteProjectPath}/package.json | grep -E '"next"|"react-scripts"|"express"' || echo "node"`);
+          const packageContent = packageCheck.stdout;
+          
+          if (packageContent.includes('"next"')) {
+            // Next.js
+            dockerfileContent = `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+ENV NODE_ENV=production
+ENV PORT=\${PORT:-3000}
+RUN npm run build
+EXPOSE \${PORT}
+CMD ["npm", "start"]`;
+          } else if (packageContent.includes('"react-scripts"')) {
+            // Create React App
+            dockerfileContent = `FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+COPY --from=build /app/build /usr/share/nginx/html
+RUN echo 'server { listen \${PORT:-80}; location / { root /usr/share/nginx/html; try_files \\$uri /index.html; } }' > /etc/nginx/conf.d/default.conf
+EXPOSE \${PORT:-80}
+CMD ["nginx", "-g", "daemon off;"]`;
+          } else {
+            // Node.js genérico
+            dockerfileContent = `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+ENV NODE_ENV=production
+ENV PORT=\${PORT:-3000}
+EXPOSE \${PORT}
+CMD ["npm", "start"]`;
+          }
+        } else {
+          // Projeto genérico
+          dockerfileContent = `FROM node:20-alpine
+WORKDIR /app
+COPY . .
+ENV PORT=\${PORT:-3000}
+EXPOSE \${PORT}
+CMD ["node", "index.js"]`;
+        }
+        
+        // Criar Dockerfile no servidor remoto
+        await ssh.execCommand(`cat > ${remoteProjectPath}/Dockerfile << 'DOCKERFILE_EOF'
+${dockerfileContent}
+DOCKERFILE_EOF`);
+        
+        this.emitLog(project._id.toString(), `✅ Dockerfile criado para projeto ${projectType}`);
+        logs += `✅ Dockerfile criado para projeto ${projectType}\n`;
+      } else {
+        this.emitLog(project._id.toString(), '✅ Dockerfile encontrado');
+        logs += '✅ Dockerfile encontrado\n';
+      }
+      
       // 4. Build da imagem Docker
       this.emitLog(project._id.toString(), '🔨 Construindo imagem Docker no servidor remoto...');
       logs += '🔨 Construindo imagem Docker no servidor remoto...\n';

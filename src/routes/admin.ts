@@ -572,48 +572,88 @@ router.post('/update', async (req: AuthRequest, res) => {
     const { exec } = await import('child_process');
     const { promisify } = await import('util');
     const execAsync = promisify(exec);
+    const path = await import('path');
+    const fs = await import('fs');
     
     console.log('🔄 Iniciando atualização do sistema...');
     
-    // 1. Fazer backup do .env
-    console.log('📦 Fazendo backup do .env...');
-    await execAsync('cp .env .env.backup');
+    // Detectar se está rodando em Docker ou não
+    const isDocker = fs.existsSync('/.dockerenv');
+    console.log(`📍 Ambiente: ${isDocker ? 'Docker' : 'Host'}`);
     
-    // 2. Fazer git pull
-    console.log('⬇️  Baixando atualizações do GitHub...');
-    const { stdout: pullOutput } = await execAsync('git pull origin main');
-    console.log(pullOutput);
+    if (isDocker) {
+      // Rodando em Docker - atualizar via host
+      console.log('🐳 Detectado ambiente Docker');
+      
+      res.json({ 
+        message: 'Para atualizar o sistema em Docker, execute no servidor host:\n\ncd deploy-manager\ngit pull origin main\ndocker-compose down\ndocker-compose up -d --build',
+        requiresManualUpdate: true
+      });
+      
+    } else {
+      // Rodando no host - pode atualizar automaticamente
+      console.log('💻 Detectado ambiente Host');
+      
+      try {
+        // 1. Fazer backup do .env
+        console.log('📦 Fazendo backup do .env...');
+        if (fs.existsSync('.env')) {
+          await execAsync('cp .env .env.backup');
+        }
+        
+        // 2. Verificar se é um repositório git
+        const { stdout: isGitRepo } = await execAsync('git rev-parse --is-inside-work-tree 2>/dev/null || echo "false"');
+        
+        if (isGitRepo.trim() === 'false') {
+          throw new Error('Não é um repositório Git. Clone o projeto do GitHub primeiro.');
+        }
+        
+        // 3. Fazer git pull
+        console.log('⬇️  Baixando atualizações do GitHub...');
+        const { stdout: pullOutput, stderr: pullError } = await execAsync('git pull origin main 2>&1');
+        console.log(pullOutput);
+        
+        if (pullOutput.includes('Already up to date')) {
+          return res.json({ 
+            message: 'Sistema já está atualizado!',
+            output: pullOutput,
+            alreadyUpToDate: true
+          });
+        }
+        
+        // 4. Instalar dependências
+        console.log('📦 Instalando dependências do backend...');
+        await execAsync('cd backend && npm install 2>&1');
+        
+        console.log('📦 Instalando dependências do frontend...');
+        await execAsync('cd frontend && npm install 2>&1');
+        
+        console.log('✅ Atualização concluída!');
+        
+        res.json({ 
+          message: 'Sistema atualizado com sucesso! Reiniciando em 5 segundos...',
+          output: pullOutput,
+          success: true
+        });
+        
+        // Reiniciar processo após 5 segundos
+        setTimeout(() => {
+          console.log('🔄 Reiniciando aplicação...');
+          process.exit(0);
+        }, 5000);
+        
+      } catch (cmdError: any) {
+        console.error('❌ Erro ao executar comandos:', cmdError);
+        throw new Error(`Erro ao atualizar: ${cmdError.message}`);
+      }
+    }
     
-    // 3. Instalar dependências (se houver mudanças)
-    console.log('📦 Instalando dependências...');
-    await execAsync('cd backend && npm install');
-    await execAsync('cd frontend && npm install');
-    
-    // 4. Rebuild containers
-    console.log('🐳 Reconstruindo containers...');
-    await execAsync('docker-compose build');
-    
-    // 5. Reiniciar containers
-    console.log('🔄 Reiniciando containers...');
-    await execAsync('docker-compose down');
-    await execAsync('docker-compose up -d');
-    
-    console.log('✅ Atualização concluída!');
-    
-    res.json({ 
-      message: 'Sistema atualizado com sucesso! Reiniciando...',
-      output: pullOutput
-    });
-    
-    // Reiniciar processo após 5 segundos
-    setTimeout(() => {
-      process.exit(0);
-    }, 5000);
   } catch (error: any) {
     console.error('❌ Erro ao atualizar:', error);
     res.status(500).json({ 
       error: 'Erro ao atualizar sistema',
-      details: error.message 
+      details: error.message,
+      stack: error.stack
     });
   }
 });

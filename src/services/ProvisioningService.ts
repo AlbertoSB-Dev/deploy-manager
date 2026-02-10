@@ -121,7 +121,7 @@ else
     echo "✅ Docker já instalado"
 fi
 
-echo "PROGRESS:60:🐳 Instalando Docker Compose..."
+echo "PROGRESS:55:🐳 Instalando Docker Compose..."
 if ! command -v docker-compose &> /dev/null; then
     COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d\\" -f4)
     curl -L "https://github.com/docker/compose/releases/download/\${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -129,6 +129,49 @@ if ! command -v docker-compose &> /dev/null; then
     echo "✅ Docker Compose instalado"
 else
     echo "✅ Docker Compose já instalado"
+fi
+
+echo "PROGRESS:60:🌐 Criando rede Docker coolify..."
+docker network create coolify 2>/dev/null || echo "✅ Rede coolify já existe"
+
+echo "PROGRESS:65:🔀 Instalando Traefik (Proxy Reverso)..."
+if ! docker ps -a | grep -q traefik; then
+    mkdir -p /opt/traefik
+    cat > /opt/traefik/traefik.yml << 'EOF'
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: coolify
+
+log:
+  level: INFO
+EOF
+
+    docker run -d \\
+      --name traefik \\
+      --restart unless-stopped \\
+      --network coolify \\
+      -p 80:80 \\
+      -p 443:443 \\
+      -p 8080:8080 \\
+      -v /var/run/docker.sock:/var/run/docker.sock:ro \\
+      -v /opt/traefik/traefik.yml:/etc/traefik/traefik.yml:ro \\
+      traefik:v2.10
+    
+    echo "✅ Traefik instalado e rodando"
+else
+    echo "✅ Traefik já instalado"
 fi
 
 echo "PROGRESS:70:📦 Instalando Node.js..."
@@ -140,26 +183,34 @@ else
     echo "✅ Node.js já instalado"
 fi
 
-echo "PROGRESS:80:📁 Criando estrutura de diretórios..."
+echo "PROGRESS:75:📁 Criando estrutura de diretórios..."
 mkdir -p /opt/projects
+mkdir -p /opt/databases
+mkdir -p /opt/backups
 mkdir -p /opt/deploy-manager/logs
-mkdir -p /opt/deploy-manager/backups
-chmod 755 /opt/projects
-chmod 755 /opt/deploy-manager
+chmod 755 /opt/projects /opt/databases /opt/backups /opt/deploy-manager
 
-echo "PROGRESS:85:🔥 Configurando firewall..."
+echo "PROGRESS:80:🔥 Configurando firewall..."
 if command -v ufw &> /dev/null; then
     ufw --force enable
     ufw allow 22/tcp
     ufw allow 80/tcp
     ufw allow 443/tcp
     ufw allow 8000:9000/tcp
+    ufw allow 8080/tcp
     echo "✅ Firewall configurado"
 fi
 
-echo "PROGRESS:90:🧹 Limpando cache..."
+echo "PROGRESS:85:🧹 Limpando cache..."
 apt-get autoremove -y
 apt-get clean
+
+echo "PROGRESS:90:✅ Verificando instalações..."
+docker --version
+docker-compose --version
+node --version
+git --version
+docker ps | grep traefik
 
 echo "DONE"
 `;
@@ -252,7 +303,9 @@ echo "DONE"
       docker: false,
       dockerCompose: false,
       git: false,
-      nodejs: false
+      nodejs: false,
+      traefik: false,
+      network: false
     };
     
     const errors: string[] = [];
@@ -276,8 +329,18 @@ echo "DONE"
     const nodeCheck = await ssh.execCommand('node --version');
     checks.nodejs = nodeCheck.code === 0;
     
+    // Verificar Traefik
+    const traefikCheck = await ssh.execCommand('docker ps | grep traefik');
+    checks.traefik = traefikCheck.code === 0;
+    if (!checks.traefik) errors.push('Traefik não está rodando');
+    
+    // Verificar rede coolify
+    const networkCheck = await ssh.execCommand('docker network ls | grep coolify');
+    checks.network = networkCheck.code === 0;
+    if (!checks.network) errors.push('Rede coolify não criada');
+    
     // Verificar diretórios
-    const dirCheck = await ssh.execCommand('ls -la /opt/projects');
+    const dirCheck = await ssh.execCommand('ls -la /opt/projects /opt/databases /opt/backups');
     if (dirCheck.code !== 0) errors.push('Diretórios não criados');
     
     return {

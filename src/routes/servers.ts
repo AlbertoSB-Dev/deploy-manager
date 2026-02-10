@@ -178,6 +178,69 @@ router.post('/servers/:id/reprovision', protect, async (req: AuthRequest, res) =
   }
 });
 
+// Atualizar sistema do servidor (apt update, upgrade, etc)
+router.post('/servers/:id/update-system', protect, async (req: AuthRequest, res) => {
+  try {
+    const serverId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    
+    const server = await Server.findOne({ 
+      _id: serverId,
+      userId: req.user?._id 
+    });
+    
+    if (!server) {
+      return res.status(404).json({ error: 'Servidor não encontrado' });
+    }
+    
+    console.log(`🔄 Atualizando sistema do servidor ${server.name}...`);
+    
+    await sshService.connect(server);
+    
+    // Detectar sistema operacional
+    const osResult = await sshService.executeCommand(serverId, 'cat /etc/os-release | grep "^ID=" | cut -d= -f2 | tr -d \'"\'');
+    const os = osResult.stdout.trim();
+    
+    let updateCommands: string[] = [];
+    
+    if (os === 'ubuntu' || os === 'debian') {
+      updateCommands = [
+        'export DEBIAN_FRONTEND=noninteractive',
+        'apt-get update -y',
+        'apt-get upgrade -y',
+        'apt-get autoremove -y',
+        'apt-get clean'
+      ];
+    } else if (os === 'centos' || os === 'rhel') {
+      updateCommands = [
+        'yum update -y',
+        'yum clean all'
+      ];
+    } else {
+      return res.status(400).json({ error: 'Sistema operacional não suportado' });
+    }
+    
+    // Executar comandos
+    for (const cmd of updateCommands) {
+      console.log(`Executando: ${cmd}`);
+      const result = await sshService.executeCommand(serverId, cmd);
+      if (result.code !== 0) {
+        console.error(`Erro ao executar ${cmd}:`, result.stderr);
+      }
+    }
+    
+    console.log('✅ Sistema atualizado com sucesso');
+    
+    res.json({ 
+      success: true, 
+      message: 'Sistema atualizado com sucesso',
+      os
+    });
+  } catch (error: any) {
+    console.error('Erro ao atualizar sistema:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Testar conexão SSH
 router.post('/servers/:id/test', protect, async (req: AuthRequest, res) => {
   try {
