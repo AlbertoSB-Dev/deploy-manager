@@ -11,8 +11,8 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Otimizações
-  swcMinify: true,
+  // Configurar root do projeto para evitar warning de múltiplos lockfiles
+  outputFileTracingRoot: require('path').join(__dirname, '../'),
   
   // Configurações de imagem
   images: {
