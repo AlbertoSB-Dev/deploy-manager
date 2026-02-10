@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Server, Plus, RefreshCw, Trash2, Settings, CheckCircle, XCircle, AlertCircle, BarChart3 } from 'lucide-react';
+import { Server, Plus, RefreshCw, Trash2, Settings, CheckCircle, XCircle, AlertCircle, BarChart3, FolderOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { AddServerModal } from './AddServerModal';
 import { ProvisioningModal } from './ProvisioningModal';
 import { ServerMonitorModal } from './ServerMonitorModal';
+import { useRouter } from 'next/navigation';
 
 interface ServerData {
   _id: string;
@@ -35,6 +36,7 @@ interface ServerData {
 }
 
 export function ServerList() {
+  const router = useRouter();
   const [servers, setServers] = useState<ServerData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -234,6 +236,13 @@ export function ServerList() {
                 </div>
 
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => router.push(`/files/${server._id}`)}
+                    className="p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition"
+                    title="Gerenciador de Arquivos"
+                  >
+                    <FolderOpen className="w-5 h-5" />
+                  </button>
                   <button
                     onClick={() => {
                       setMonitoringServerId(server._id);

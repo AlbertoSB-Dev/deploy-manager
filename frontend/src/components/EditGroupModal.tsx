@@ -1,18 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
-interface Group {
-  _id: string;
-  name: string;
-  icon: string;
-  color: string;
-  description?: string;
-}
-
 interface EditGroupModalProps {
-  group: Group;
+  group: {
+    _id: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    color?: string;
+  };
   onClose: () => void;
   onUpdated: () => void;
 }
@@ -32,8 +30,8 @@ const COLORS = [
 export default function EditGroupModal({ group, onClose, onUpdated }: EditGroupModalProps) {
   const [name, setName] = useState(group.name);
   const [description, setDescription] = useState(group.description || '');
-  const [icon, setIcon] = useState(group.icon);
-  const [color, setColor] = useState(group.color);
+  const [icon, setIcon] = useState(group.icon || '📁');
+  const [color, setColor] = useState(group.color || '#3B82F6');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -192,7 +190,7 @@ export default function EditGroupModal({ group, onClose, onUpdated }: EditGroupM
                 disabled={loading || !name}
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Salvando...' : 'Salvar Alterações'}
+                {loading ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
           </form>

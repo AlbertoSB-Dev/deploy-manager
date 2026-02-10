@@ -8,6 +8,7 @@ export interface IDeployment {
   status: 'success' | 'failed' | 'deploying';
   logs: string;
   deployedBy: string;
+  containerId?: string; // ID do container Docker criado neste deploy
 }
 
 export interface IGitAuth {
@@ -58,7 +59,8 @@ const DeploymentSchema = new Schema({
   deployedAt: { type: Date, default: Date.now },
   status: { type: String, enum: ['success', 'failed', 'deploying'], default: 'deploying' },
   logs: { type: String, default: '' },
-  deployedBy: { type: String, required: true }
+  deployedBy: { type: String, required: true },
+  containerId: { type: String } // ID do container Docker criado neste deploy
 });
 
 const GitAuthSchema = new Schema({

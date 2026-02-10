@@ -3,6 +3,7 @@ import { Server } from '../models/Server';
 import { provisioningService } from '../services/ProvisioningService';
 import { sshService } from '../services/SSHService';
 import { protect, AuthRequest } from '../middleware/auth';
+import { validateCommand } from '../utils/commandValidator';
 
 const router = express.Router();
 
@@ -248,6 +249,19 @@ router.post('/servers/:id/exec', protect, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Comando não fornecido' });
     }
     
+    // 🔒 VALIDAR COMANDO ANTES DE EXECUTAR
+    const validation = validateCommand(command);
+    if (!validation.valid) {
+      console.log(`⚠️ Comando bloqueado: ${command}`);
+      console.log(`   Razão: ${validation.error}`);
+      return res.status(403).json({ 
+        output: '',
+        error: `Comando não permitido: ${validation.error}`,
+        code: 1,
+        success: false
+      });
+    }
+    
     const serverId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     
     const server = await Server.findOne({ 
@@ -258,10 +272,10 @@ router.post('/servers/:id/exec', protect, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Servidor não encontrado' });
     }
     
-    console.log(`🔧 Executando comando no servidor ${server.name}: ${command}`);
+    console.log(`🔧 Executando comando validado no servidor ${server.name}: ${validation.sanitized}`);
     
     await sshService.connect(server);
-    const result = await sshService.executeCommand(serverId, command);
+    const result = await sshService.executeCommand(serverId, validation.sanitized!);
     
     console.log(`📤 Resultado - Code: ${result.code}, Stdout: "${result.stdout}", Stderr: "${result.stderr}"`);
     

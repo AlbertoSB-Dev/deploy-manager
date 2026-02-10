@@ -39,6 +39,8 @@ export class DeployService {
   }
 
   private async deployRemote(project: IProject, version?: string, deployedBy: string = 'system'): Promise<any> {
+    console.log('🚀 Deploy Remoto - Versão recebida:', version);
+    
     const server = await Server.findById(project.serverId);
     if (!server) throw new Error('Servidor não encontrado');
 
@@ -88,17 +90,21 @@ export class DeployService {
       const commitResult = await ssh.execCommand(`cd ${remoteProjectPath} && git rev-parse HEAD`);
       const commit = commitResult.stdout.trim();
       
-      // 3. Criar arquivo .env
-      if (project.envVars && Object.keys(project.envVars).length > 0) {
-        this.emitLog(project._id.toString(), '📝 Configurando variáveis de ambiente...');
-        logs += '📝 Configurando variáveis de ambiente...\n';
-        
-        const envContent = Object.entries(project.envVars)
-          .map(([key, value]) => `${key}=${value}`)
-          .join('\\n');
-        
-        await ssh.execCommand(`echo "${envContent}" > ${remoteProjectPath}/.env`);
-      }
+      // 3. Criar arquivo .env com PORT configurada
+      this.emitLog(project._id.toString(), '📝 Configurando variáveis de ambiente...');
+      logs += '📝 Configurando variáveis de ambiente...\n';
+      
+      // Adicionar PORT às variáveis de ambiente
+      const allEnvVars = {
+        ...project.envVars,
+        PORT: project.port?.toString() || '3000', // Garantir que PORT seja definida
+      };
+      
+      const envContent = Object.entries(allEnvVars)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\\n');
+      
+      await ssh.execCommand(`echo "${envContent}" > ${remoteProjectPath}/.env`);
       
       // 4. Build da imagem Docker
       this.emitLog(project._id.toString(), '🔨 Construindo imagem Docker no servidor remoto...');
@@ -130,7 +136,8 @@ export class DeployService {
       logs += '🚀 Iniciando novo container...\n';
       
       const containerName = `${project.name}-${Date.now()}`;
-      const internalPort = project.internalPort || 3000;
+      // Usar a porta configurada pelo usuário (project.port)
+      const internalPort = project.port || 3000;
       
       // Adicionar variáveis de ambiente
       let envVars = '';
@@ -159,39 +166,83 @@ export class DeployService {
         const { TraefikService } = await import('./TraefikService');
         
         // Verificar se Traefik está rodando
-        const traefikRunning = await TraefikService.checkTraefik(ssh);
+        const traefikRunning = await TraefikService.isTraefikRunning(ssh);
         
         if (traefikRunning) {
-          // Opção 1: Usar Traefik (Coolify)
+          // Opção 1: Usar Traefik
           this.emitLog(project._id.toString(), '✅ Traefik detectado - usando Traefik');
           logs += '✅ Traefik detectado - usando Traefik\n';
           
-          // Garantir que rede coolify existe
-          await TraefikService.ensureCoolifyNetwork(ssh);
+          // Detectar e garantir que rede existe
+          const networkName = await TraefikService.detectNetwork(ssh);
+          await TraefikService.ensureNetwork(networkName, ssh);
           
           // Gerar labels do Traefik
-          const labels = TraefikService.generateTraefikLabels(
-            project.name,
+          const labels = await TraefikService.generateLabels(
             project.domain,
-            internalPort
+            internalPort,
+            project.name,
+            false // SSL desabilitado por padrão
           );
           
-          traefikLabels = labels.join(' ');
+          // Converter labels para formato docker run
+          const labelArgs = TraefikService.labelsToDockerArgs(labels);
+          traefikLabels = labelArgs.join(' ');
           
           this.emitLog(project._id.toString(), `📡 Configurando domínio: ${project.domain} → porta ${internalPort}`);
           logs += `📡 Configurando domínio: ${project.domain} → porta ${internalPort}\n`;
         } else {
-          // Opção 2: Fallback para Nginx
-          this.emitLog(project._id.toString(), '⚠️  Traefik não encontrado - usando Nginx como fallback');
-          logs += '⚠️  Traefik não encontrado - usando Nginx como fallback\n';
-          useNginxFallback = true;
+          // Traefik não encontrado - instalar automaticamente
+          this.emitLog(project._id.toString(), '📦 Traefik não encontrado - instalando automaticamente...');
+          logs += '📦 Traefik não encontrado - instalando automaticamente...\n';
+          
+          try {
+            // Instalar Traefik (passando conexão SSH)
+            await TraefikService.setupTraefik(ssh);
+            
+            this.emitLog(project._id.toString(), '✅ Traefik instalado com sucesso!');
+            logs += '✅ Traefik instalado com sucesso!\n';
+            
+            // Detectar e garantir que rede existe
+            const networkName = await TraefikService.detectNetwork(ssh);
+            await TraefikService.ensureNetwork(networkName, ssh);
+            
+            // Gerar labels do Traefik
+            const labels = await TraefikService.generateLabels(
+              project.domain,
+              internalPort,
+              project.name,
+              false
+            );
+            
+            // Converter labels para formato docker run
+            const labelArgs = TraefikService.labelsToDockerArgs(labels);
+            traefikLabels = labelArgs.join(' ');
+            
+            this.emitLog(project._id.toString(), `📡 Configurando domínio: ${project.domain} → porta ${internalPort}`);
+            logs += `📡 Configurando domínio: ${project.domain} → porta ${internalPort}\n`;
+          } catch (error: any) {
+            // Se falhar, usar Nginx como fallback
+            this.emitLog(project._id.toString(), `⚠️  Erro ao instalar Traefik: ${error.message}`);
+            logs += `⚠️  Erro ao instalar Traefik: ${error.message}\n`;
+            this.emitLog(project._id.toString(), '🔄 Usando Nginx como fallback...');
+            logs += '🔄 Usando Nginx como fallback...\n';
+            useNginxFallback = true;
+          }
         }
       }
       
-      // Criar container com labels do Traefik
+      // Detectar rede do Traefik
+      const { TraefikService } = await import('./TraefikService');
+      const networkName = await TraefikService.detectNetwork(ssh);
+      await TraefikService.ensureNetwork(networkName, ssh);
+      
+      // Criar container com labels do Traefik e PORT configurada
       const runResult = await ssh.execCommand(`
         docker run -d \
           --name ${containerName} \
+          --network ${networkName} \
+          -e PORT=${project.port || 3000} \
           ${envVars} \
           ${traefikLabels} \
           --restart unless-stopped \
@@ -204,30 +255,81 @@ export class DeployService {
       
       const newContainerId = runResult.stdout.trim();
       
+      // Verificar se container está rodando
+      this.emitLog(project._id.toString(), '🔍 Verificando container...');
+      logs += '🔍 Verificando container...\n';
+      
+      const checkResult = await ssh.execCommand(`docker ps --filter "id=${newContainerId}" --format "{{.Status}}"`);
+      if (!checkResult.stdout.includes('Up')) {
+        // Container não está rodando - verificar logs
+        const logsResult = await ssh.execCommand(`docker logs ${newContainerId}`);
+        throw new Error(`Container não iniciou corretamente:\n${logsResult.stdout}\n${logsResult.stderr}`);
+      }
+      
+      this.emitLog(project._id.toString(), '✅ Container rodando');
+      logs += '✅ Container rodando\n';
+      
       // 7. Configurar proxy (Traefik ou Nginx)
       if (project.domain) {
         try {
           if (traefikLabels) {
-            // Usar Traefik
-            const { TraefikService } = await import('./TraefikService');
+            // Usar Traefik - verificar conectividade
+            this.emitLog(project._id.toString(), '🔍 Verificando conectividade com Traefik...');
+            logs += '🔍 Verificando conectividade com Traefik...\n';
             
-            await TraefikService.connectToNetwork(ssh, newContainerId);
+            // Verificar se container está na rede do Traefik
+            const networkCheckResult = await ssh.execCommand(`docker inspect ${newContainerId} --format '{{range $key, $value := .NetworkSettings.Networks}}{{$key}}{{println}}{{end}}'`);
+            const containerNetworks = networkCheckResult.stdout.trim().split('\n');
+            
+            this.emitLog(project._id.toString(), `📡 Container nas redes: ${containerNetworks.join(', ')}`);
+            logs += `📡 Container nas redes: ${containerNetworks.join(', ')}\n`;
+            
+            // Verificar se Traefik está na mesma rede
+            const traefikNetworkResult = await ssh.execCommand(`docker inspect traefik-proxy --format '{{range $key, $value := .NetworkSettings.Networks}}{{$key}}{{end}}'`);
+            const traefikNetwork = traefikNetworkResult.stdout.trim();
+            
+            this.emitLog(project._id.toString(), `🔍 Rede do Traefik: ${traefikNetwork}`);
+            logs += `🔍 Rede do Traefik: ${traefikNetwork}\n`;
+            
+            if (!traefikNetwork) {
+              // Fallback: tentar detectar rede manualmente
+              this.emitLog(project._id.toString(), '⚠️  Não foi possível detectar rede do Traefik automaticamente');
+              logs += '⚠️  Não foi possível detectar rede do Traefik automaticamente\n';
+              
+              // Verificar se existe rede coolify
+              const coolifyCheck = await ssh.execCommand(`docker network ls --filter "name=coolify" --format "{{.Name}}"`);
+              if (coolifyCheck.stdout.includes('coolify')) {
+                const traefikNetworkFallback = 'coolify';
+                this.emitLog(project._id.toString(), `🔧 Usando rede: ${traefikNetworkFallback}`);
+                logs += `🔧 Usando rede: ${traefikNetworkFallback}\n`;
+                
+                if (!containerNetworks.includes(traefikNetworkFallback)) {
+                  await ssh.execCommand(`docker network connect ${traefikNetworkFallback} ${newContainerId}`);
+                  this.emitLog(project._id.toString(), '✅ Container conectado à rede coolify');
+                  logs += '✅ Container conectado à rede coolify\n';
+                }
+              }
+            } else if (!containerNetworks.includes(traefikNetwork)) {
+              this.emitLog(project._id.toString(), `⚠️  Container não está na rede do Traefik (${traefikNetwork})`);
+              logs += `⚠️  Container não está na rede do Traefik (${traefikNetwork})\n`;
+              
+              this.emitLog(project._id.toString(), `🔧 Conectando à rede: ${traefikNetwork}...`);
+              logs += `🔧 Conectando à rede: ${traefikNetwork}...\n`;
+              
+              await ssh.execCommand(`docker network connect ${traefikNetwork} ${newContainerId}`);
+              
+              this.emitLog(project._id.toString(), '✅ Container conectado à rede do Traefik');
+              logs += '✅ Container conectado à rede do Traefik\n';
+            }
             
             this.emitLog(project._id.toString(), `✅ Traefik configurado! Acesse: http://${project.domain}`);
             logs += `✅ Traefik configurado! Acesse: http://${project.domain}\n`;
             
-            // Aguardar 2 segundos para Traefik detectar
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Aguardar 3 segundos para Traefik detectar
+            await new Promise(resolve => setTimeout(resolve, 3000));
             
-            // Testar domínio
-            const domainWorks = await TraefikService.testDomain(ssh, project.domain);
-            if (domainWorks) {
-              this.emitLog(project._id.toString(), '🎉 Domínio está acessível!');
-              logs += '🎉 Domínio está acessível!\n';
-            } else {
-              this.emitLog(project._id.toString(), '⏳ Aguarde alguns segundos para o Traefik detectar o serviço');
-              logs += '⏳ Aguarde alguns segundos para o Traefik detectar o serviço\n';
-            }
+            this.emitLog(project._id.toString(), '⏳ Aguarde alguns segundos para o Traefik detectar o serviço');
+            logs += '⏳ Aguarde alguns segundos para o Traefik detectar o serviço\n';
           } else if (useNginxFallback) {
             // Usar Nginx como fallback
             this.emitLog(project._id.toString(), '📦 Instalando Nginx (fallback)...');
@@ -260,14 +362,17 @@ export class DeployService {
       project.latestGitCommit = commit;
       project.hasUpdate = false;
       
+      console.log('💾 Salvando deployment com versão:', version || commit.substring(0, 8));
+      
       project.deployments.push({
-        version: commit.substring(0, 8),
+        version: version || commit.substring(0, 8), // Usar versão semântica se fornecida
         branch: project.branch,
         commit,
         deployedAt: new Date(),
         status: 'success',
         logs,
-        deployedBy
+        deployedBy,
+        containerId: newContainerId // Salvar ID do container criado
       });
       
       await project.save();
@@ -285,7 +390,8 @@ export class DeployService {
         deployedAt: new Date(),
         status: 'failed',
         logs: logs + '\n' + error.message,
-        deployedBy
+        deployedBy,
+        containerId: undefined // Deploy falhou, sem container
       });
       await project.save();
       
@@ -394,7 +500,8 @@ export class DeployService {
         deployedAt: new Date(),
         status: 'success' as const,
         logs,
-        deployedBy
+        deployedBy,
+        containerId: newContainerId // Salvar ID do container criado
       };
 
       project.deployments.push(deployment);
@@ -436,7 +543,8 @@ export class DeployService {
         deployedAt: new Date(),
         status: 'failed',
         logs,
-        deployedBy
+        deployedBy,
+        containerId: undefined // Deploy falhou, sem container
       });
       await project.save();
 

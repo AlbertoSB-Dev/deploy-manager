@@ -14,20 +14,15 @@ export const protect = async (
   try {
     let token;
 
-    console.log('🔍 Headers recebidos:', req.headers);
-    console.log('🔍 Authorization header:', req.headers.authorization);
-
     // Verificar se token existe no header
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith('Bearer')
     ) {
       token = req.headers.authorization.split(' ')[1];
-      console.log('✅ Token extraído:', token.substring(0, 20) + '...');
     }
 
     if (!token) {
-      console.log('❌ Token não encontrado no header');
       return res.status(401).json({
         success: false,
         error: 'Não autorizado. Token não fornecido.',

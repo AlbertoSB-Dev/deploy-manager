@@ -12,10 +12,21 @@
     "docker:logs": "docker-compose logs -f",
     "docker:rebuild": "docker-compose up -d --build"
   },
-  "keywords": ["deploy", "manager", "git", "automation", "devops"],
+  "keywords": [
+    "deploy",
+    "manager",
+    "git",
+    "automation",
+    "devops"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "express-rate-limit": "^8.2.1",
+    "express-validator": "^7.3.1",
+    "helmet": "^8.1.0"
   }
 }

@@ -206,7 +206,7 @@ function PlanCard({ plan, onEdit, onDelete }: any) {
         </div>
 
         <div className="space-y-2">
-          {plan.features.map((feature, index) => (
+          {plan.features.map((feature: string, index: number) => (
             <div key={index} className="flex items-start gap-2">
               <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
               <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
@@ -251,7 +251,7 @@ function PlanModal({ plan, onClose, onSaved }: any) {
       // Filtrar features vazias
       const cleanedData = {
         ...formData,
-        features: formData.features.filter(f => f.trim() !== ''),
+        features: formData.features.filter((f: string) => f.trim() !== ''),
       };
 
       if (plan) {
@@ -279,7 +279,7 @@ function PlanModal({ plan, onClose, onSaved }: any) {
   const removeFeature = (index: number) => {
     setFormData({
       ...formData,
-      features: formData.features.filter((_, i) => i !== index),
+      features: formData.features.filter((_: string, i: number) => i !== index),
     });
   };
 
@@ -404,7 +404,7 @@ function PlanModal({ plan, onClose, onSaved }: any) {
                 Funcionalidades
               </label>
               <div className="space-y-2">
-                {formData.features.map((feature, index) => (
+                {formData.features.map((feature: string, index: number) => (
                   <div key={index} className="flex gap-2">
                     <input
                       type="text"

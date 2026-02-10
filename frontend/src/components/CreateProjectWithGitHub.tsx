@@ -14,7 +14,7 @@ interface CreateProjectWithGitHubProps {
 }
 
 export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWithGitHubProps) {
-  const [step, setStep] = useState<'method' | 'github' | 'manual'>('method');
+  const [step, setStep] = useState<'method' | 'github' | 'manual' | 'wordpress'>('method');
   const [githubConnected, setGithubConnected] = useState(false);
   const [githubToken, setGithubToken] = useState('');
   const [selectedRepo, setSelectedRepo] = useState<{ owner: string; repo: string; defaultBranch: string } | null>(null);
@@ -179,6 +179,26 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
                 <p className="text-gray-600 dark:text-gray-400">
                   Insira a URL do repositório Git manualmente
                 </p>
+              </button>
+
+              {/* Opção WordPress */}
+              <button
+                onClick={() => setStep('wordpress')}
+                className="w-full border-2 border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:border-purple-500 dark:hover:border-purple-400 transition-colors text-left bg-white dark:bg-gray-800"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg">
+                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M21.469 6.825c.84 1.537 1.318 3.3 1.318 5.175 0 3.979-2.156 7.456-5.363 9.325l3.295-9.527c.615-1.54.82-2.771.82-3.864 0-.405-.026-.78-.07-1.11m-7.981.105c.647-.03 1.232-.105 1.232-.105.582-.075.514-.93-.067-.899 0 0-1.755.135-2.88.135-1.064 0-2.85-.15-2.85-.15-.585-.03-.661.855-.075.885 0 0 .54.061 1.125.09l1.68 4.605-2.37 7.08L5.354 6.9c.649-.03 1.234-.1 1.234-.1.585-.075.516-.93-.065-.896 0 0-1.746.138-2.874.138-.2 0-.438-.008-.69-.015C4.911 3.15 8.235 1.215 12 1.215c2.809 0 5.365 1.072 7.286 2.833-.046-.003-.091-.009-.141-.009-1.06 0-1.812.923-1.812 1.914 0 .89.513 1.643 1.06 2.531.411.72.89 1.643.89 2.977 0 .915-.354 1.994-.821 3.479l-1.075 3.585-3.9-11.61.001.014zM12 22.784c-1.059 0-2.081-.153-3.048-.437l3.237-9.406 3.315 9.087c.024.053.05.101.078.149-1.12.393-2.325.607-3.582.607M1.211 12c0-1.564.336-3.05.935-4.39L7.29 21.709C3.694 19.96 1.212 16.271 1.211 12M12 0C5.385 0 0 5.385 0 12s5.385 12 12 12 12-5.385 12-12S18.615 0 12 0z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">Instalar WordPress</h4>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Instale WordPress com um clique, incluindo banco de dados MySQL
+                    </p>
+                  </div>
+                </div>
               </button>
             </div>
           )}
@@ -415,6 +435,54 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
                 </button>
               </div>
             </form>
+          )}
+
+          {/* Formulário WordPress */}
+          {step === 'wordpress' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Instalar WordPress</h3>
+                <button
+                  type="button"
+                  onClick={() => setStep('method')}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  ← Voltar
+                </button>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  O WordPress será instalado com MySQL e configurado automaticamente com Traefik para acesso via domínio.
+                </p>
+              </div>
+
+              <div className="text-center py-8">
+                <div className="inline-flex p-6 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 rounded-3xl mb-4">
+                  <svg className="w-16 h-16 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21.469 6.825c.84 1.537 1.318 3.3 1.318 5.175 0 3.979-2.156 7.456-5.363 9.325l3.295-9.527c.615-1.54.82-2.771.82-3.864 0-.405-.026-.78-.07-1.11m-7.981.105c.647-.03 1.232-.105 1.232-.105.582-.075.514-.93-.067-.899 0 0-1.755.135-2.88.135-1.064 0-2.85-.15-2.85-.15-.585-.03-.661.855-.075.885 0 0 .54.061 1.125.09l1.68 4.605-2.37 7.08L5.354 6.9c.649-.03 1.234-.1 1.234-.1.585-.075.516-.93-.065-.896 0 0-1.746.138-2.874.138-.2 0-.438-.008-.69-.015C4.911 3.15 8.235 1.215 12 1.215c2.809 0 5.365 1.072 7.286 2.833-.046-.003-.091-.009-.141-.009-1.06 0-1.812.923-1.812 1.914 0 .89.513 1.643 1.06 2.531.411.72.89 1.643.89 2.977 0 .915-.354 1.994-.821 3.479l-1.075 3.585-3.9-11.61.001.014zM12 22.784c-1.059 0-2.081-.153-3.048-.437l3.237-9.406 3.315 9.087c.024.053.05.101.078.149-1.12.393-2.325.607-3.582.607M1.211 12c0-1.564.336-3.05.935-4.39L7.29 21.709C3.694 19.96 1.212 16.271 1.211 12M12 0C5.385 0 0 5.385 0 12s5.385 12 12 12 12-5.385 12-12S18.615 0 12 0z"/>
+                  </svg>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  A instalação do WordPress será feita na aba "WordPress" do dashboard.<br/>
+                  Clique no botão abaixo para ir direto para lá.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    // Trigger para mudar para aba WordPress (será implementado)
+                    toast.success('Vá para a aba WordPress para instalar');
+                  }}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition shadow-lg"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21.469 6.825c.84 1.537 1.318 3.3 1.318 5.175 0 3.979-2.156 7.456-5.363 9.325l3.295-9.527c.615-1.54.82-2.771.82-3.864 0-.405-.026-.78-.07-1.11m-7.981.105c.647-.03 1.232-.105 1.232-.105.582-.075.514-.93-.067-.899 0 0-1.755.135-2.88.135-1.064 0-2.85-.15-2.85-.15-.585-.03-.661.855-.075.885 0 0 .54.061 1.125.09l1.68 4.605-2.37 7.08L5.354 6.9c.649-.03 1.234-.1 1.234-.1.585-.075.516-.93-.065-.896 0 0-1.746.138-2.874.138-.2 0-.438-.008-.69-.015C4.911 3.15 8.235 1.215 12 1.215c2.809 0 5.365 1.072 7.286 2.833-.046-.003-.091-.009-.141-.009-1.06 0-1.812.923-1.812 1.914 0 .89.513 1.643 1.06 2.531.411.72.89 1.643.89 2.977 0 .915-.354 1.994-.821 3.479l-1.075 3.585-3.9-11.61.001.014zM12 22.784c-1.059 0-2.081-.153-3.048-.437l3.237-9.406 3.315 9.087c.024.053.05.101.078.149-1.12.393-2.325.607-3.582.607M1.211 12c0-1.564.336-3.05.935-4.39L7.29 21.709C3.694 19.96 1.212 16.271 1.211 12M12 0C5.385 0 0 5.385 0 12s5.385 12 12 12 12-5.385 12-12S18.615 0 12 0z"/>
+                  </svg>
+                  Ir para Instalação WordPress
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
