@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
-import { Terminal as TerminalIcon, Send, Trash2, RefreshCw } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, Trash2, RefreshCw, X } from 'lucide-react';
 
 interface Server {
   _id: string;
@@ -21,7 +21,11 @@ interface Container {
   isRunning: boolean;
 }
 
-export default function TerminalSSH() {
+interface TerminalSSHProps {
+  onClose: () => void;
+}
+
+export default function TerminalSSH({ onClose }: TerminalSSHProps) {
   const [servers, setServers] = useState<Server[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
   const [selectedServer, setSelectedServer] = useState<string>('');
@@ -179,31 +183,40 @@ export default function TerminalSSH() {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <TerminalIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4 animate-fadeIn" onClick={onClose}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-scaleIn" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-750">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <TerminalIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Terminal SSH
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Execute comandos nos servidores e containers gerenciados
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Terminal SSH
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Execute comandos nos servidores e containers gerenciados
-              </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={clearOutput}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Limpar
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              </button>
             </div>
           </div>
-          <button
-            onClick={clearOutput}
-            className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Limpar
-          </button>
-        </div>
 
         {/* Seletores */}
         <div className="grid grid-cols-2 gap-4">
@@ -280,7 +293,7 @@ export default function TerminalSSH() {
       </div>
 
       {/* Terminal Output */}
-      <div className="bg-gray-900 p-6 font-mono text-sm min-h-[400px] max-h-[500px] overflow-y-auto" ref={outputRef}>
+      <div className="bg-gray-900 p-6 font-mono text-sm flex-1 overflow-y-auto" ref={outputRef}>
         <div className="flex items-center gap-2 mb-4">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>
           <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
@@ -338,7 +351,7 @@ export default function TerminalSSH() {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-700 bg-gray-800">
+      <div className="p-4 border-t border-gray-700 bg-gray-800 flex-shrink-0">
         <div className="flex gap-2">
           <input
             type="text"
@@ -366,6 +379,7 @@ export default function TerminalSSH() {
           Pressione Enter para executar • {selectedContainer ? 'Executando no container' : 'Executando no servidor'}
         </p>
       </div>
+    </div>
     </div>
   );
 }

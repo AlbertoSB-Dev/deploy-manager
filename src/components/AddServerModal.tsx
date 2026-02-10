@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ interface AddServerModalProps {
 }
 
 export function AddServerModal({ onClose, onSuccess }: AddServerModalProps) {
+  const [groups, setGroups] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     host: '',
@@ -18,9 +19,23 @@ export function AddServerModal({ onClose, onSuccess }: AddServerModalProps) {
     username: 'root',
     authType: 'password' as 'password' | 'key',
     password: '',
-    privateKey: ''
+    privateKey: '',
+    groupId: ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Carregar grupos ao montar
+  useEffect(() => {
+    const loadGroups = async () => {
+      try {
+        const response = await api.get('/groups');
+        setGroups(response.data);
+      } catch (error) {
+        console.error('Erro ao carregar grupos:', error);
+      }
+    };
+    loadGroups();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +107,30 @@ export function AddServerModal({ onClose, onSuccess }: AddServerModalProps) {
               required
             />
           </div>
+
+          {/* Grupo */}
+          {groups.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Grupo (opcional)
+              </label>
+              <select
+                value={formData.groupId}
+                onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="">Sem grupo</option>
+                {groups.map((group) => (
+                  <option key={group._id} value={group._id}>
+                    {group.icon} {group.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Organize seus servidores em grupos
+              </p>
+            </div>
+          )}
 
           {/* Host */}
           <div>

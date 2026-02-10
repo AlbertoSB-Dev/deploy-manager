@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { Plus, RefreshCw, Rocket, Moon, Sun, LogOut, User as UserIcon, Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -11,11 +10,8 @@ import GroupCard from '@/components/GroupCard';
 import DashboardStats from '@/components/DashboardStats';
 import { CreateProjectWithGitHub } from '@/components/CreateProjectWithGitHub';
 import CreateGroupModal from '@/components/CreateGroupModal';
-import EditGroupModal from '@/components/EditGroupModal';
-import { AddServerModal } from '@/components/AddServerModal';
-import CreateDatabaseModal from '@/components/CreateDatabaseModal';
 
-export default function Dashboard() {
+export default function DashboardNew() {
   const [groups, setGroups] = useState<any[]>([]);
   const [servers, setServers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -24,12 +20,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [showEditGroup, setShowEditGroup] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<any>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAddServer, setShowAddServer] = useState(false);
-  const [showCreateDatabase, setShowCreateDatabase] = useState(false);
   
   const { theme, toggleTheme } = useTheme();
   const { user, loading: authLoading, logout } = useAuth();
@@ -67,34 +59,6 @@ export default function Dashboard() {
   const handleLogout = () => {
     logout();
     toast.success('Logout realizado com sucesso!');
-  };
-
-  const handleEditGroup = async (groupId: string) => {
-    const group = groups.find(g => g._id === groupId);
-    if (group) {
-      setEditingGroup(group);
-      setShowEditGroup(true);
-    }
-  };
-
-  const handleDeleteGroup = async (groupId: string) => {
-    try {
-      await api.delete(`/groups/${groupId}`);
-      toast.success('Grupo excluído com sucesso!');
-      loadAllData();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao excluir grupo');
-    }
-  };
-
-  const handleMoveServer = async (serverId: string, targetGroupId: string) => {
-    try {
-      await api.put(`/servers/${serverId}`, { groupId: targetGroupId === 'ungrouped' ? null : targetGroupId });
-      toast.success('Servidor movido com sucesso!');
-      loadAllData();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao mover servidor');
-    }
   };
 
   // Criar grupo padrão se não existir
@@ -177,24 +141,7 @@ export default function Dashboard() {
                     <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
-                      {user?.role === 'admin' && (
-                        <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs rounded-full">
-                          Administrador
-                        </span>
-                      )}
                     </div>
-                    {user?.role === 'admin' && (
-                      <Link
-                        href="/admin"
-                        className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span>Painel Admin</span>
-                      </Link>
-                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
@@ -222,9 +169,9 @@ export default function Dashboard() {
         />
 
         {/* Actions Bar */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-          <div className="w-full md:w-auto">
-            <div className="relative">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
@@ -235,34 +182,20 @@ export default function Dashboard() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCreateGroup(true)}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              <span>Novo Grupo</span>
-            </button>
-            <button
-              onClick={() => setShowAddServer(true)}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Novo Servidor</span>
+              <span className="hidden md:inline">Novo Grupo</span>
             </button>
             <button
               onClick={() => setShowCreateProject(true)}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              <span>Novo Projeto</span>
-            </button>
-            <button
-              onClick={() => setShowCreateDatabase(true)}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Novo Banco</span>
+              <span className="hidden md:inline">Novo Projeto</span>
             </button>
           </div>
         </div>
@@ -302,11 +235,7 @@ export default function Dashboard() {
                 projects={projects}
                 databases={databases}
                 wordpress={wordpress}
-                onEdit={handleEditGroup}
-                onDelete={handleDeleteGroup}
                 onDataUpdate={loadAllData}
-                onMoveServer={handleMoveServer}
-                allGroups={allGroups}
               />
             ))}
           </div>
@@ -331,43 +260,6 @@ export default function Dashboard() {
             setShowCreateGroup(false);
             loadAllData();
             toast.success('Grupo criado com sucesso!');
-          }}
-        />
-      )}
-
-      {showEditGroup && editingGroup && (
-        <EditGroupModal
-          group={editingGroup}
-          onClose={() => {
-            setShowEditGroup(false);
-            setEditingGroup(null);
-          }}
-          onUpdated={() => {
-            setShowEditGroup(false);
-            setEditingGroup(null);
-            loadAllData();
-            toast.success('Grupo atualizado com sucesso!');
-          }}
-        />
-      )}
-
-      {showAddServer && (
-        <AddServerModal
-          onClose={() => setShowAddServer(false)}
-          onSuccess={() => {
-            setShowAddServer(false);
-            loadAllData();
-          }}
-        />
-      )}
-
-      {showCreateDatabase && (
-        <CreateDatabaseModal
-          servers={servers}
-          onClose={() => setShowCreateDatabase(false)}
-          onSuccess={() => {
-            setShowCreateDatabase(false);
-            loadAllData();
           }}
         />
       )}
