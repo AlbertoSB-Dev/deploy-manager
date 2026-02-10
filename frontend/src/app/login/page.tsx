@@ -6,6 +6,7 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { ArkLogoModern } from '@/components/ArkLogoModern';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
+import { useRouter } from 'next/router';
 
 export default function LoginPage() {
   const router = useRouter();
