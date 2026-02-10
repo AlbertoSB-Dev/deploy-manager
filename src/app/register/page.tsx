@@ -60,7 +60,7 @@ export default function RegisterPage() {
   };
 
   const handleGoogleSignup = async () => {
-    toast.info('Cadastro com Google em breve!');
+    toast('Cadastro com Google em breve!', { icon: 'ℹ️' });
     // TODO: Implementar Google OAuth
   };
 

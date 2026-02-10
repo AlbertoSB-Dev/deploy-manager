@@ -6,7 +6,7 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { ArkLogoImage } from '@/components/ArkLogoImage';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,7 +44,7 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    toast.info('Login com Google em breve!');
+    toast('Login com Google em breve!', { icon: 'ℹ️' });
     // TODO: Implementar Google OAuth
   };
 

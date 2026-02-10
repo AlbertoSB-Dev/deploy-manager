@@ -1,22 +1,18 @@
 FROM node:20-alpine
 
-# Criar diretório da aplicação
 WORKDIR /app
 
 # Copiar package files
 COPY package*.json ./
 
 # Instalar dependências
-RUN npm ci
+RUN npm install
 
 # Copiar código fonte
 COPY . .
 
-# Build da aplicação
-RUN npm run build
-
 # Expor porta
 EXPOSE 3000
 
-# Comando padrão
-CMD ["npm", "start"]
+# Rodar em modo desenvolvimento (mais estável)
+CMD ["npm", "run", "dev"]

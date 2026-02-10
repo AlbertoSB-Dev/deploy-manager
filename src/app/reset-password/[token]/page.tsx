@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import { Rocket, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
-import { ArkLogoModern } from '@/components/ArkLogoModern';
+import { ArkLogoImage } from '@/components/ArkLogoImage';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
