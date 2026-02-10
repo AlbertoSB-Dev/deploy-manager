@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:7.0
+    container_name: ark-deploy-mongodb-prod
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - ark-deploy-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: ark-deploy-backend-prod
+    restart: unless-stopped
+    environment:
+      PORT: 8001
+      MONGODB_URI: mongodb://admin:${MONGO_PASSWORD}@mongodb:27017/ark-deploy?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      PROJECTS_DIR: /opt/projects
+      BASE_DOMAIN: ${BASE_DOMAIN:-sslip.io}
+      SERVER_IP: ${SERVER_IP}
+      NODE_ENV: production
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      FRONTEND_URL: ${FRONTEND_URL}
+      GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/projects:/opt/projects
+      - /opt/databases:/opt/databases
+      - /opt/backups:/opt/backups
+    networks:
+      - ark-deploy-network
+      - coolify
+    ports:
+      - "8001:8001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: ark-deploy-frontend-prod
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:8001}
+      NODE_ENV: production
+    networks:
+      - ark-deploy-network
+      - coolify
+    ports:
+      - "8000:8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ark-deploy.rule=Host(`${DOMAIN:-ark-deploy.${SERVER_IP}.sslip.io}`)"
+      - "traefik.http.routers.ark-deploy.entrypoints=web"
+      - "traefik.http.services.ark-deploy.loadbalancer.server.port=8000"
+      - "traefik.docker.network=coolify"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  ark-deploy-network:
+    driver: bridge
+  coolify:
+    external: true
+
+volumes:
+  mongodb_data:
+    driver: local

@@ -1,0 +1,67 @@
+# Dockerfile otimizado para Frontend em Produção
+FROM node:20-alpine AS base
+
+# ============================================
+# Stage 1: Dependencies
+# ============================================
+FROM base AS deps
+
+WORKDIR /app
+
+# Copiar package files
+COPY package*.json ./
+
+# Instalar dependências
+RUN npm ci
+
+# ============================================
+# Stage 2: Builder
+# ============================================
+FROM base AS builder
+
+WORKDIR /app
+
+# Copiar node_modules
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copiar código fonte
+COPY . .
+
+# Build Next.js
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+RUN npm run build
+
+# ============================================
+# Stage 3: Runner
+# ============================================
+FROM base AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Criar usuário não-root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copiar arquivos necessários
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+# Expor porta
+EXPOSE 8000
+
+ENV PORT=8000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8000 || exit 1
+
+# Iniciar Next.js
+CMD ["node", "server.js"]
