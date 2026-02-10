@@ -1,21 +1,22 @@
-FROM node:22-alpine
+FROM node:20-alpine
 
+# Criar diretório da aplicação
 WORKDIR /app
 
-# Copy package files
+# Copiar package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Instalar dependências
+RUN npm ci
 
-# Copy source code
+# Copiar código fonte
 COPY . .
 
-# Build Next.js
+# Build da aplicação
 RUN npm run build
 
-# Expose port
-EXPOSE 3001
+# Expor porta
+EXPOSE 3000
 
-# Start application
+# Comando padrão
 CMD ["npm", "start"]
