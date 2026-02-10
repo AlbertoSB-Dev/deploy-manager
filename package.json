@@ -1,7 +1,7 @@
 {
-  "name": "deploy-manager-backend",
+  "name": "ark-deploy-backend",
   "version": "1.0.0",
-  "description": "Sistema de gerenciamento de deploy multi-projeto",
+  "description": "Ark Deploy - Sistema de gerenciamento de deploy multi-projeto",
   "main": "dist/index.js",
   "scripts": {
     "dev": "set PORT=8001&& ts-node-dev --respawn --transpile-only src/index.ts",
