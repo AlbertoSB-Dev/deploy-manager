@@ -16,6 +16,7 @@ export default function CreateDatabaseModal({ servers, onClose, onSuccess }: Cre
     name: '',
     serverId: '',
     type: 'mysql' as 'mysql' | 'postgresql' | 'mongodb' | 'mariadb' | 'redis' | 'minio',
+    version: 'latest',
     username: '',
     password: '',
     port: 3306,
@@ -68,7 +69,7 @@ export default function CreateDatabaseModal({ servers, onClose, onSuccess }: Cre
     if (type === 'redis') defaultPort = 6379;
     if (type === 'minio') defaultPort = 9000;
     
-    setFormData({ ...formData, type, port: defaultPort });
+    setFormData({ ...formData, type, port: defaultPort, version: 'latest' });
   };
 
   return (
@@ -286,6 +287,59 @@ export default function CreateDatabaseModal({ servers, onClose, onSuccess }: Cre
               onChange={(e) => setFormData({ ...formData, port: parseInt(e.target.value) })}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
+          </div>
+
+          {/* Versão */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Versão
+            </label>
+            <select
+              value={formData.version}
+              onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option value="latest">Latest (Mais recente)</option>
+              {formData.type === 'mysql' && (
+                <>
+                  <option value="8.0">MySQL 8.0</option>
+                  <option value="5.7">MySQL 5.7</option>
+                </>
+              )}
+              {formData.type === 'mariadb' && (
+                <>
+                  <option value="11">MariaDB 11</option>
+                  <option value="10.11">MariaDB 10.11</option>
+                  <option value="10.6">MariaDB 10.6</option>
+                </>
+              )}
+              {formData.type === 'postgresql' && (
+                <>
+                  <option value="16">PostgreSQL 16</option>
+                  <option value="15">PostgreSQL 15</option>
+                  <option value="14">PostgreSQL 14</option>
+                </>
+              )}
+              {formData.type === 'mongodb' && (
+                <>
+                  <option value="7">MongoDB 7</option>
+                  <option value="6">MongoDB 6</option>
+                  <option value="5">MongoDB 5</option>
+                </>
+              )}
+              {formData.type === 'redis' && (
+                <>
+                  <option value="7-alpine">Redis 7 Alpine</option>
+                  <option value="6-alpine">Redis 6 Alpine</option>
+                </>
+              )}
+              {formData.type === 'minio' && (
+                <option value="latest">MinIO Latest</option>
+              )}
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Recomendamos usar "latest" para ter sempre a versão mais recente
+            </p>
           </div>
 
           {/* Checkbox para criar painel admin */}
