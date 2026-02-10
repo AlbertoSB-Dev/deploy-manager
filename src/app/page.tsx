@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Rocket, GitBranch, Terminal, Zap, Shield, Globe, CheckCircle, ArrowRight, Github, Server, Clock } from 'lucide-react';
+import { GitBranch, Terminal, Zap, Shield, Globe, CheckCircle, ArrowRight, Github, Server, Clock } from 'lucide-react';
+import { ArkLogoModern, ArkIconModern } from '@/components/ArkLogoModern';
 
 export default function LandingPage() {
   const [terminalLines, setTerminalLines] = useState<string[]>([]);
@@ -55,9 +56,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg">
-                <Rocket className="w-6 h-6 text-white" />
-              </div>
+              <ArkLogoModern size={40} showText={false} />
               <span className="text-2xl font-bold text-gray-900 dark:text-white">Ark Deploy</span>
             </div>
             <div className="flex items-center space-x-4">
@@ -184,7 +183,7 @@ export default function LandingPage() {
           {/* Feature 3 */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-4">
-              <Rocket className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <ArkIconModern size={24} />
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Deploy Remoto</h3>
             <p className="text-gray-600 dark:text-gray-400">
@@ -306,9 +305,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg">
-                  <Rocket className="w-5 h-5 text-white" />
-                </div>
+                <ArkLogoModern size={36} showText={false} />
                 <span className="text-lg font-bold text-gray-900 dark:text-white">Ark Deploy</span>
               </div>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
