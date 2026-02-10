@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Rocket, Mail, Lock, User, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { ArkLogoModern } from '@/components/ArkLogoModern';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 
@@ -77,11 +78,8 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link href="/" className="flex items-center justify-center space-x-3 mb-8">
-          <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg">
-            <Rocket className="w-8 h-8 text-white" />
-          </div>
-          <span className="text-3xl font-bold text-gray-900 dark:text-white">Ark Deploy</span>
+        <Link href="/" className="flex items-center justify-center mb-8">
+          <ArkLogoModern size={60} showText={true} />
         </Link>
 
         {/* Card */}

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, RefreshCw, Rocket, Moon, Sun, LogOut, User as UserIcon, Search } from 'lucide-react';
+import { Plus, RefreshCw, Moon, Sun, LogOut, User as UserIcon, Search } from 'lucide-react';
+import { ArkLogoModern, ArkIconModern } from '@/components/ArkLogoModern';
 import { api } from '@/lib/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -78,8 +79,8 @@ export default function DashboardNew() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-flex p-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-lg mb-4 animate-pulse">
-            <Rocket className="w-12 h-12 text-white" />
+          <div className="mb-4">
+            <ArkLogoModern size={80} showText={false} animated={true} />
           </div>
           <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
         </div>
@@ -94,9 +95,7 @@ export default function DashboardNew() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg">
-                <Rocket className="w-6 h-6 text-white" />
-              </div>
+              <ArkLogoModern size={40} showText={false} />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Ark Deploy</h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors">Gerencie seus deploys com facilidade</p>
@@ -210,8 +209,8 @@ export default function DashboardNew() {
           </div>
         ) : allGroups.length === 0 ? (
           <div className="text-center py-16">
-            <div className="inline-flex p-6 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-3xl mb-6">
-              <Rocket className="w-20 h-20 text-blue-600 dark:text-blue-400" />
+            <div className="mb-6 flex justify-center">
+              <ArkIconModern size={80} />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Comece criando um grupo</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
