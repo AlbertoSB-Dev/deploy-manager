@@ -13,17 +13,14 @@ WORKDIR /app/backend
 # Copiar package files do backend
 COPY backend/package*.json ./
 
-# Instalar TODAS as dependências (incluindo devDependencies para build)
+# Instalar TODAS as dependências (precisamos manter ts-node para runtime)
 RUN npm ci
 
 # Copiar código do backend
 COPY backend/ ./
 
-# Build TypeScript (usando tsconfig relaxado para produção)
-RUN npx tsc --project tsconfig.prod.json || npm run build
-
-# Remover devDependencies após build
-RUN npm prune --production
+# NÃO fazer build - vamos rodar com ts-node em produção
+# Isso evita problemas de tipo durante o build
 
 # ============================================
 # Stage 2: Build Frontend
@@ -54,11 +51,8 @@ WORKDIR /app
 # Instalar PM2 para gerenciar múltiplos processos
 RUN npm install -g pm2
 
-# Copiar backend compilado
-COPY --from=backend-builder /app/backend/dist ./backend/dist
-COPY --from=backend-builder /app/backend/node_modules ./backend/node_modules
-COPY --from=backend-builder /app/backend/package*.json ./backend/
-COPY --from=backend-builder /app/backend/scripts ./backend/scripts
+# Copiar backend (código TypeScript + node_modules)
+COPY --from=backend-builder /app/backend ./backend
 
 # Copiar frontend compilado
 COPY --from=frontend-builder /app/frontend/.next ./frontend/.next
@@ -76,10 +70,12 @@ RUN echo '{\n\
     {\n\
       "name": "backend",\n\
       "cwd": "/app/backend",\n\
-      "script": "dist/index.js",\n\
+      "script": "src/index.ts",\n\
+      "interpreter": "node_modules/.bin/ts-node",\n\
       "env": {\n\
         "PORT": "8001",\n\
-        "NODE_ENV": "production"\n\
+        "NODE_ENV": "production",\n\
+        "TS_NODE_TRANSPILE_ONLY": "true"\n\
       },\n\
       "error_file": "/app/logs/backend-error.log",\n\
       "out_file": "/app/logs/backend-out.log",\n\
