@@ -81,17 +81,32 @@ ark-deploy/
 curl -fsSL https://raw.githubusercontent.com/AlbertoSB-Dev/deploy-manager/main/install-simple.sh | sudo bash
 ```
 
-**OU:**
+**OU com Docker (Recomendado):**
 
 ```bash
 git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
 cd deploy-manager
-sudo ./install-simple.sh
+docker-compose up -d
+```
+
+**OU build único (Backend + Frontend em 1 container):**
+
+```bash
+git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
+cd deploy-manager
+docker build -t ark-deploy:latest .
+docker run -d --name ark-deploy -p 8000:8000 -p 8001:8001 \
+  -e MONGODB_URI="mongodb://admin:senha@mongodb:27017/ark-deploy?authSource=admin" \
+  -e JWT_SECRET="seu-secret" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  ark-deploy:latest
 ```
 
 **Pronto!** Acesse: `http://SEU_IP:8000`
 
 **Login:** admin@admin.com / admin123
+
+📚 **Guia completo de deploy com Docker:** [DOCKER-DEPLOY.md](./DOCKER-DEPLOY.md)
 
 ---
 
@@ -343,6 +358,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8001/api
 ## 📚 Documentação
 
 - 📖 [Guia de Início Rápido](./QUICK-START.md)
+- 🐳 [Deploy com Docker](./DOCKER-DEPLOY.md)
+- 📦 [Instalação Detalhada](./INSTALACAO.md)
+- ⚡ [Instalação em 1 Linha](./INSTALL-ONE-LINE.md)
 - 🔄 [Sistema de Controle de Versões](./VERSION-CONTROL.md)
 - 🔐 [Repositórios Privados](./docs/PRIVATE-REPOS.md)
 - 🔑 [GitHub OAuth Setup](./docs/GITHUB-OAUTH-SETUP.md)
