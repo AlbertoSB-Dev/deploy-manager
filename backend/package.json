@@ -9,7 +9,14 @@
     "build:prod": "tsc --project tsconfig.prod.json || tsc --skipLibCheck --noEmit false",
     "start": "set PORT=8001&& node dist/index.js",
     "make-admin": "node scripts/make-admin.js",
-    "seed-plans": "node scripts/seed-plans.js"
+    "make-admin-auto": "node scripts/make-admin-auto.js",
+    "seed-plans": "node scripts/seed-plans.js",
+    "reset-plans": "node scripts/reset-plans.js",
+    "reset-password": "node scripts/reset-password.js",
+    "list-projects": "node scripts/list-projects.js",
+    "delete-project": "node scripts/delete-project.js",
+    "clear-servers": "node scripts/clear-servers.js",
+    "remove-unique-index": "node scripts/remove-unique-index.js"
   },
   "dependencies": {
     "archiver": "^6.0.1",

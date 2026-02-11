@@ -78,12 +78,28 @@ Depois que o backend estiver rodando:
 
 ```bash
 cd deploy-manager/backend
-npm run script scripts/make-admin-auto.js
+npm run make-admin-auto
 ```
 
 Isso vai criar um usuário admin com:
 - Email: admin@example.com
 - Senha: admin123
+
+## Scripts Disponíveis
+
+No backend, você pode rodar:
+
+```bash
+npm run make-admin-auto      # Criar admin automaticamente
+npm run make-admin           # Criar admin interativamente
+npm run seed-plans           # Criar planos padrão
+npm run reset-plans          # Resetar planos
+npm run reset-password       # Resetar senha de usuário
+npm run list-projects        # Listar projetos
+npm run delete-project       # Deletar projeto
+npm run clear-servers        # Limpar servidores
+npm run remove-unique-index  # Remover índice único do MongoDB
+```
 
 ## Testar o Sistema de Deploy do Painel
 
