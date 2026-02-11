@@ -17,7 +17,9 @@
     "delete-project": "node scripts/delete-project.js",
     "clear-servers": "node scripts/clear-servers.js",
     "remove-unique-index": "node scripts/remove-unique-index.js",
-    "migrate-plans": "node scripts/migrate-plans.js"
+    "migrate-plans": "node scripts/migrate-plans.js",
+    "add-discount-tiers": "node scripts/add-discount-tiers.js",
+    "seed-plans-with-discounts": "node scripts/seed-plans-with-discounts.js"
   },
   "dependencies": {
     "archiver": "^6.0.1",
