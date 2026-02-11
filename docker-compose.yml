@@ -48,7 +48,7 @@ services:
       - "8001:8001"
     depends_on:
       - mongodb
-    command: npm run dev
+    command: npm run build && npm start
 
   # Frontend
   frontend:
@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8001/api}
-      NODE_ENV: development
+      NODE_ENV: production
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -77,7 +77,7 @@ services:
       - "traefik.docker.network=coolify"
     depends_on:
       - backend
-    command: npm run dev
+    command: npm run build && npm start
 
 networks:
   ark-deploy-network:
