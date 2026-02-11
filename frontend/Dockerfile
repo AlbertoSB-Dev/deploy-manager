@@ -4,13 +4,13 @@ WORKDIR /app
 
 # Variáveis de ambiente para build
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 
 # Copiar package files
 COPY package*.json ./
 
 # Instalar TODAS as dependências (incluindo devDependencies para build)
-RUN npm ci
+RUN npm ci --include=dev
 
 # Copiar código fonte
 COPY . .
@@ -31,7 +31,9 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/next.config.js ./
-COPY --from=builder /app/node_modules ./node_modules
+
+# Instalar apenas dependências de produção
+RUN npm ci --only=production
 
 # Expor porta
 EXPOSE 8000
