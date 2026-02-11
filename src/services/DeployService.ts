@@ -124,9 +124,13 @@ export class DeployService {
         let dockerfileContent = '';
         
         if (projectType === 'nodejs') {
-          // Detectar se é Next.js, React, ou Node puro
-          const packageCheck = await ssh.execCommand(`cat ${remoteProjectPath}/package.json | grep -E '"next"|"react-scripts"|"express"' || echo "node"`);
+          // Detectar se é Next.js, React, TypeScript ou Node puro
+          const packageCheck = await ssh.execCommand(`cat ${remoteProjectPath}/package.json | grep -E '"next"|"react-scripts"|"express"|"typescript"|"ts-node"' || echo "node"`);
           const packageContent = packageCheck.stdout;
+          
+          // Verificar se é TypeScript
+          const hasTsConfig = await ssh.execCommand(`test -f ${remoteProjectPath}/tsconfig.json && echo "yes" || echo "no"`);
+          const isTypeScript = hasTsConfig.stdout.trim() === 'yes';
           
           if (packageContent.includes('"next"')) {
             // Next.js
@@ -155,8 +159,35 @@ COPY --from=build /app/build /usr/share/nginx/html
 RUN echo 'server { listen \${PORT:-80}; location / { root /usr/share/nginx/html; try_files \\$uri /index.html; } }' > /etc/nginx/conf.d/default.conf
 EXPOSE \${PORT:-80}
 CMD ["nginx", "-g", "daemon off;"]`;
+          } else if (isTypeScript) {
+            // TypeScript backend (Express, etc) - usar ts-node
+            dockerfileContent = `FROM node:20-alpine
+
+# Instalar dependências do sistema
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+
+# Instalar todas as dependências (incluindo devDependencies para ts-node)
+RUN npm ci
+
+# Copiar código fonte
+COPY . .
+
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=\${PORT:-3000}
+
+# Expor porta
+EXPOSE \${PORT}
+
+# Usar ts-node para executar TypeScript diretamente
+CMD ["npx", "ts-node", "--transpile-only", "src/index.ts"]`;
           } else {
-            // Node.js genérico
+            // Node.js genérico (JavaScript)
             dockerfileContent = `FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
