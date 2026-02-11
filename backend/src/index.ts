@@ -26,6 +26,9 @@ import { UpdateCheckerService } from './services/UpdateCheckerService';
 
 const app = express();
 
+// Trust proxy - necessário quando atrás de Nginx/proxy reverso
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet({
   contentSecurityPolicy: {
