@@ -17,12 +17,13 @@ COPY . .
 
 # Variáveis de ambiente padrão
 ENV NODE_ENV=production
-
-# A porta será definida via variável de ambiente no deploy
-ENV PORT=8000
+ENV PORT=8001
 
 # Expor porta
-EXPOSE 8000
+EXPOSE 8001
 
-# Usar ts-node para executar sem compilar (mais rápido para deploy)
-CMD ["npx", "ts-node", "--transpile-only", "src/index.ts"]
+# Build TypeScript
+RUN npm run build
+
+# Comando de produção
+CMD ["node", "dist/index.js"]
