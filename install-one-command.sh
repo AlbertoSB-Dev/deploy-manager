@@ -8,9 +8,9 @@ set -e
 echo "🚀 Instalando Ark Deploy..."
 echo ""
 
-# Detectar IP público automaticamente
+# Detectar IP público automaticamente (IPv4)
 echo "🔍 Detectando IP público..."
-SERVER_IP=$(curl -s ifconfig.me || curl -s icanhazip.com || curl -s ipinfo.io/ip)
+SERVER_IP=$(curl -4 -s ifconfig.me || curl -4 -s icanhazip.com || curl -4 -s ipinfo.io/ip || hostname -I | awk '{print $1}')
 echo "✅ IP detectado: $SERVER_IP"
 echo ""
 
@@ -18,12 +18,24 @@ echo ""
 if ! command -v docker &> /dev/null; then
     echo "📦 Instalando Docker..."
     curl -fsSL https://get.docker.com | sh
-    systemctl start docker
-    systemctl enable docker
     echo "✅ Docker instalado"
 else
     echo "✅ Docker já instalado"
 fi
+
+# Garantir que Docker está rodando
+echo "🔄 Iniciando Docker daemon..."
+systemctl start docker 2>/dev/null || service docker start 2>/dev/null || true
+systemctl enable docker 2>/dev/null || true
+sleep 3
+
+# Verificar se Docker está funcionando
+if ! docker ps &> /dev/null; then
+    echo "❌ Erro: Docker não está rodando"
+    echo "Execute manualmente: systemctl start docker"
+    exit 1
+fi
+echo "✅ Docker rodando"
 
 # Instalar Docker Compose se não existir
 if ! command -v docker-compose &> /dev/null; then
