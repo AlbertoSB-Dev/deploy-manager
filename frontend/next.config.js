@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'standalone',
   
   // Ignorar erros de TypeScript e ESLint durante build em produção
   typescript: {
