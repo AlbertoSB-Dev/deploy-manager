@@ -1,21 +1,25 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import path from 'path';
-import fs from 'fs/promises';
-import { io } from '../index';
 import PanelVersion from '../models/PanelVersion';
 
 const execAsync = promisify(exec);
 
 export class PanelDeployService {
   private panelPath = '/opt/ark-deploy';
+  private io: any = null;
+
+  setIO(io: any) {
+    this.io = io;
+  }
 
   private emitLog(message: string) {
     console.log(message);
-    io.to('panel-deploy').emit('panel-deploy-log', {
-      message,
-      timestamp: new Date().toISOString()
-    });
+    if (this.io) {
+      this.io.to('panel-deploy').emit('panel-deploy-log', {
+        message,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 
   async getVersions() {

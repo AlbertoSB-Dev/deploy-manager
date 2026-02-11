@@ -24,6 +24,7 @@ import backupRoutes from './routes/backups';
 import logsRoutes from './routes/logs';
 import panelDeployRoutes from './routes/panel-deploy';
 import { UpdateCheckerService } from './services/UpdateCheckerService';
+import { panelDeployService } from './services/PanelDeployService';
 
 const app = express();
 
@@ -177,6 +178,10 @@ console.log('✅ Variáveis de ambiente validadas');
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ Conectado ao MongoDB');
+    
+    // Passar io para o serviço de deploy do painel
+    panelDeployService.setIO(io);
+    
     server.listen(PORT, () => {
       console.log(`🚀 Deploy Manager rodando na porta ${PORT}`);
       
@@ -190,4 +195,4 @@ mongoose.connect(MONGODB_URI)
     process.exit(1);
   });
 
-export { io };
+export { io, app, server };
