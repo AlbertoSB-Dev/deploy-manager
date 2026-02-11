@@ -31,9 +31,7 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/next.config.js ./
-
-# Instalar apenas dependências de produção
-RUN npm ci --only=production
+COPY --from=builder /app/node_modules ./node_modules
 
 # Expor porta
 EXPOSE 8000
