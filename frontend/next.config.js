@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   
   // Ignorar erros de TypeScript e ESLint durante build em produção
   typescript: {
@@ -8,12 +9,6 @@ const nextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
-  },
-  
-  // Desabilitar export estático completamente
-  staticPageGenerationTimeout: 0,
-  experimental: {
-    isrMemoryCacheSize: 0,
   },
   
   // Configurar root do projeto para evitar warning de múltiplos lockfiles
