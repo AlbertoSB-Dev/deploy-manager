@@ -91,6 +91,58 @@ echo "🌐 Criando rede Docker..."
 docker network create coolify 2>/dev/null || echo "✅ Rede coolify já existe"
 echo ""
 
+# Configurar Nginx como proxy reverso
+echo "🔧 Configurando Nginx..."
+if ! command -v nginx &> /dev/null; then
+    apt-get update -qq
+    apt-get install -y nginx
+fi
+
+# Criar configuração do Nginx
+cat > /etc/nginx/sites-available/ark-deploy << 'NGINX_EOF'
+# Frontend - painel.*.sslip.io
+server {
+    listen 80;
+    server_name ~^painel\..*\.sslip\.io$;
+
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# Backend API - api.*.sslip.io
+server {
+    listen 80;
+    server_name ~^api\..*\.sslip\.io$;
+
+    location / {
+        proxy_pass http://localhost:8001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+NGINX_EOF
+
+ln -sf /etc/nginx/sites-available/ark-deploy /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl restart nginx && systemctl enable nginx
+echo "✅ Nginx configurado"
+echo ""
+
 # Iniciar containers
 echo "🐳 Iniciando containers..."
 docker-compose up -d
