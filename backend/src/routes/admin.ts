@@ -582,13 +582,68 @@ router.post('/update', async (req: AuthRequest, res) => {
     console.log(`📍 Ambiente: ${isDocker ? 'Docker' : 'Host'}`);
     
     if (isDocker) {
-      // Rodando em Docker - atualizar via host
-      console.log('🐳 Detectado ambiente Docker');
+      // Rodando em Docker - executar script de atualização no host
+      console.log('🐳 Detectado ambiente Docker - Executando atualização em produção');
       
-      res.json({ 
-        message: 'Para atualizar o sistema em Docker, execute no servidor host:\n\ncd deploy-manager\ngit pull origin main\ndocker-compose down\ndocker-compose up -d --build',
-        requiresManualUpdate: true
-      });
+      try {
+        // Verificar se há atualizações disponíveis primeiro
+        const { stdout: gitFetch } = await execAsync('cd /opt/ark-deploy && git fetch origin main 2>&1');
+        const { stdout: gitStatus } = await execAsync('cd /opt/ark-deploy && git status -uno 2>&1');
+        
+        if (gitStatus.includes('Your branch is up to date')) {
+          return res.json({ 
+            message: 'Sistema já está atualizado!',
+            alreadyUpToDate: true
+          });
+        }
+        
+        // Executar script de atualização em produção
+        console.log('🚀 Executando script de atualização em produção...');
+        
+        // Criar script temporário para executar a atualização
+        const updateScript = `#!/bin/bash
+set -e
+cd /opt/ark-deploy
+echo "📥 Atualizando código..."
+git reset --hard HEAD
+git pull origin main
+echo "⏹️  Parando containers..."
+docker-compose down
+echo "🗑️  Removendo imagens antigas..."
+docker rmi ark-deploy-frontend ark-deploy-backend 2>/dev/null || true
+echo "🧹 Limpando cache..."
+docker builder prune -af
+rm -rf frontend/.next frontend/node_modules/.cache backend/dist 2>/dev/null || true
+echo "🔨 Reconstruindo em modo PRODUÇÃO..."
+docker-compose build --no-cache --pull
+echo "🚀 Iniciando containers..."
+docker-compose up -d
+echo "✅ Atualização concluída!"
+`;
+        
+        // Salvar script temporário
+        fs.writeFileSync('/tmp/ark-deploy-update.sh', updateScript);
+        await execAsync('chmod +x /tmp/ark-deploy-update.sh');
+        
+        // Executar script em background
+        exec('nohup /tmp/ark-deploy-update.sh > /tmp/ark-deploy-update.log 2>&1 &');
+        
+        res.json({ 
+          message: 'Atualização iniciada! O sistema será reiniciado automaticamente em alguns minutos.',
+          success: true,
+          requiresReload: true
+        });
+        
+      } catch (cmdError: any) {
+        console.error('❌ Erro ao executar atualização:', cmdError);
+        
+        // Fallback: instruções manuais
+        res.json({ 
+          message: 'Para atualizar o sistema, execute no servidor:\n\ncd /opt/ark-deploy\n./switch-to-production.sh\n\nOu manualmente:\ncd /opt/ark-deploy\ngit pull\ndocker-compose down\ndocker-compose build --no-cache\ndocker-compose up -d',
+          requiresManualUpdate: true,
+          error: cmdError.message
+        });
+      }
       
     } else {
       // Rodando no host - pode atualizar automaticamente

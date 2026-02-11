@@ -116,21 +116,20 @@ export default function AdminSettingsPage() {
   };
 
   const handleUpdate = async () => {
-    if (!confirm('Deseja atualizar o Ark Deploy para a versão mais recente do GitHub?\n\nO sistema será reiniciado automaticamente.')) {
+    if (!confirm('Deseja atualizar o Ark Deploy para a versão mais recente do GitHub?\n\nO sistema será reiniciado automaticamente. Isso pode levar alguns minutos.')) {
       return;
     }
 
     try {
       setUpdating(true);
-      toast.loading('Atualizando sistema...', { id: 'update' });
+      toast.loading('Iniciando atualização...', { id: 'update' });
       
       const response = await api.post('/admin/update');
       
       // Verificar se requer atualização manual (Docker)
       if (response.data.requiresManualUpdate) {
         toast.dismiss('update');
-        toast('Atualização manual necessária', { 
-          icon: 'ℹ️',
+        toast.error('Atualização manual necessária', { 
           duration: 10000
         });
         
@@ -144,15 +143,33 @@ export default function AdminSettingsPage() {
       if (response.data.alreadyUpToDate) {
         toast.success('Sistema já está atualizado!', { id: 'update' });
         setUpdating(false);
+        await checkUpdates(); // Atualizar status
         return;
       }
       
-      toast.success('Sistema atualizado! Reiniciando...', { id: 'update' });
+      // Atualização iniciada com sucesso
+      toast.success('Atualização iniciada! Aguarde...', { id: 'update' });
       
-      // Aguardar reinicialização
+      // Mostrar progresso
+      let countdown = 60; // 60 segundos
+      const countdownInterval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          toast.loading(`Atualizando sistema... ${countdown}s`, { id: 'update' });
+        }
+      }, 1000);
+      
+      // Aguardar 60 segundos e tentar recarregar
       setTimeout(() => {
-        window.location.reload();
-      }, 10000);
+        clearInterval(countdownInterval);
+        toast.loading('Verificando se atualização concluiu...', { id: 'update' });
+        
+        // Tentar recarregar a página
+        setTimeout(() => {
+          window.location.reload();
+        }, 5000);
+      }, 60000);
+      
     } catch (error: any) {
       console.error('Erro ao atualizar:', error);
       const errorMsg = error.response?.data?.details || error.response?.data?.error || 'Erro ao atualizar sistema';
