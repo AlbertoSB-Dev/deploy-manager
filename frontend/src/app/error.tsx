@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect } };
+import { useEffect } from 'react';
 
 export default function Error({
   error,
