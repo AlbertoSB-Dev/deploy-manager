@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Users, TrendingUp, Server, Database, Package, Activity } from 'lucide-react';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 interface DashboardStats {
   totalUsers: number;
   activeUsers: number;
