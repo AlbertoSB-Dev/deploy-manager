@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Variáveis de ambiente para build
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 
 # Copiar package files
 COPY package*.json ./
