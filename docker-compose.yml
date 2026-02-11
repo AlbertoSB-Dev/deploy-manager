@@ -35,15 +35,13 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8000}
       GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:8000/auth/github/callback}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock  # Acesso ao Docker do host
+      - /var/run/docker.sock:/var/run/docker.sock
       - /opt/projects:/opt/projects
       - /opt/databases:/opt/databases
       - /opt/backups:/opt/backups
-      - ./backend:/app
-      - /app/node_modules
     networks:
       - ark-deploy-network
-      - coolify  # Conectar à rede do Traefik
+      - coolify
     ports:
       - "8001:8001"
     depends_on:
@@ -59,10 +57,6 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8001/api}
       NODE_ENV: production
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
     networks:
       - ark-deploy-network
       - coolify
