@@ -23,7 +23,7 @@ cat > /etc/nginx/sites-available/ark-deploy << EOF
 # Frontend - painel.*.sslip.io
 server {
     listen 80;
-    server_name painel.$SERVER_IP.sslip.io painel.*.sslip.io;
+    server_name painel.$SERVER_IP.sslip.io;
 
     location / {
         proxy_pass http://localhost:8000;
@@ -41,7 +41,7 @@ server {
 # Backend API - api.*.sslip.io
 server {
     listen 80;
-    server_name api.$SERVER_IP.sslip.io api.*.sslip.io;
+    server_name api.$SERVER_IP.sslip.io;
 
     location / {
         proxy_pass http://localhost:8001;
