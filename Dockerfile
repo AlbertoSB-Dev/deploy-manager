@@ -1,29 +1,26 @@
+# Dockerfile para Backend TypeScript com ts-node
 FROM node:20-alpine
 
-# Instalar dependências do sistema
-RUN apk add --no-cache \
-    openssh-client \
-    git \
-    bash \
-    curl
+# Instalar dependências do sistema necessárias para compilação
+RUN apk add --no-cache python3 make g++
 
-# Criar diretório da aplicação
 WORKDIR /app
 
-# Copiar package files
+# Copiar arquivos de dependências primeiro (melhor cache)
 COPY package*.json ./
 
-# Instalar dependências
-RUN npm ci --only=production
+# Instalar TODAS as dependências (incluindo devDependencies para ts-node)
+RUN npm ci
 
 # Copiar código fonte
 COPY . .
 
-# Criar diretórios necessários
-RUN mkdir -p /opt/projects /opt/databases /opt/backups
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=8000
 
 # Expor porta
-EXPOSE 8001
+EXPOSE 8000
 
-# Comando padrão
-CMD ["npm", "start"]
+# Usar ts-node para executar TypeScript diretamente (sem compilar)
+CMD ["npx", "ts-node", "--transpile-only", "src/index.ts"]
