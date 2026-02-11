@@ -1,19 +1,31 @@
 #!/usr/bin/env node
 
-/**
- * Script para criar planos com descontos pré-configurados
- */
-
 const mongoose = require('mongoose');
 require('dotenv').config();
-
-const Plan = require('../src/models/Plan').default;
 
 async function seedPlans() {
   try {
     console.log('🔄 Conectando ao MongoDB...');
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/deploy-manager');
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/deploy-manager';
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ Conectado ao MongoDB');
+
+    // Definir schema do Plan com discountTiers
+    const PlanSchema = new mongoose.Schema({
+      name: String,
+      description: String,
+      pricePerServer: Number,
+      interval: String,
+      features: [String],
+      discountTiers: [{
+        minServers: Number,
+        discountPercent: Number,
+      }],
+      isActive: Boolean,
+      isPopular: Boolean,
+    }, { timestamps: true });
+
+    const Plan = mongoose.model('Plan', PlanSchema);
 
     console.log('\n🗑️  Removendo planos antigos...');
     await Plan.deleteMany({});
@@ -100,9 +112,16 @@ async function seedPlans() {
     }
 
     console.log('\n✅ Planos criados com sucesso!');
+    console.log('\n📝 Próximos passos:');
+    console.log('   1. Acesse a página de preços: http://localhost:3000/pricing');
+    console.log('   2. Selecione um plano e mova o slider para ver os descontos');
+    console.log('   3. Acesse o admin para editar: http://localhost:3000/admin/plans\n');
+
+    await mongoose.disconnect();
     process.exit(0);
   } catch (error) {
-    console.error('❌ Erro:', error);
+    console.error('❌ Erro:', error.message);
+    await mongoose.disconnect();
     process.exit(1);
   }
 }
