@@ -1,0 +1,59 @@
+═══════════════════════════════════════════════════════════
+🚀 COMANDO PARA ATUALIZAR O PAINEL AGORA
+═══════════════════════════════════════════════════════════
+
+Execute este comando no seu servidor (SSH):
+
+bash <(cat << 'SCRIPT_END'
+#!/bin/bash
+set -e
+cd /opt/ark-deploy
+echo "📥 Atualizando código..."
+git reset --hard HEAD
+git pull origin main
+echo "⏹️  Parando containers..."
+docker-compose down
+echo "🗑️  Removendo imagens antigas..."
+docker rmi ark-deploy-frontend ark-deploy-backend 2>/dev/null || true
+echo "🧹 Limpando cache..."
+docker builder prune -af
+rm -rf frontend/.next frontend/node_modules/.cache backend/dist 2>/dev/null || true
+echo "🔨 Reconstruindo em modo PRODUÇÃO..."
+docker-compose build --no-cache --pull
+echo "🚀 Iniciando containers..."
+docker-compose up -d
+echo ""
+echo "✅ Atualização concluída!"
+echo ""
+echo "🌐 Acesse: http://38.242.213.195:8000"
+echo ""
+docker-compose logs --tail=30 frontend
+docker-compose logs --tail=30 backend
+SCRIPT_END
+)
+
+═══════════════════════════════════════════════════════════
+
+OU COPIE E COLE LINHA POR LINHA:
+
+cd /opt/ark-deploy
+git reset --hard HEAD
+git pull origin main
+docker-compose down
+docker rmi ark-deploy-frontend ark-deploy-backend
+docker builder prune -af
+rm -rf frontend/.next backend/dist
+docker-compose build --no-cache --pull
+docker-compose up -d
+
+═══════════════════════════════════════════════════════════
+
+DEPOIS DE ATUALIZAR:
+
+1. ✅ Logo PNG estará funcionando
+2. ✅ Sistema de auto-atualização estará disponível
+3. ✅ Próximas atualizações poderão ser feitas pelo painel
+
+Acesse: http://painel.38.242.213.195.sslip.io/admin/settings
+
+═══════════════════════════════════════════════════════════
