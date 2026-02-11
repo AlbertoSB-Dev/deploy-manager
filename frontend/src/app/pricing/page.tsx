@@ -12,7 +12,8 @@ interface Plan {
   _id: string;
   name: string;
   description: string;
-  pricePerServer: number;
+  pricePerServer?: number;
+  price?: number;
   interval: 'monthly' | 'yearly';
   features: string[];
   limits: {
@@ -51,7 +52,8 @@ export default function PricingPage() {
   };
 
   const selectedPlanData = plans.find(p => p._id === selectedPlan);
-  const totalPrice = selectedPlanData ? selectedPlanData.pricePerServer * servers : 0;
+  const pricePerServer = selectedPlanData ? (selectedPlanData.pricePerServer || selectedPlanData.price || 0) : 0;
+  const totalPrice = pricePerServer * servers;
 
   if (loading) {
     return (
@@ -140,7 +142,7 @@ export default function PricingPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                          R$ {plan.pricePerServer.toFixed(2)}
+                          R$ {(plan.pricePerServer || plan.price || 0).toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500">por servidor/{plan.interval === 'monthly' ? 'mês' : 'ano'}</p>
                       </div>
@@ -180,7 +182,7 @@ export default function PricingPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-700 dark:text-gray-300">Preço por servidor:</span>
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    R$ {selectedPlanData?.pricePerServer.toFixed(2) || '0.00'}
+                    R$ {pricePerServer.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

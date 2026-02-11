@@ -14,12 +14,11 @@ interface Plan {
   _id: string;
   name: string;
   description: string;
-  price: number;
+  pricePerServer: number;
   interval: 'monthly' | 'yearly';
   features: string[];
   limits: {
     maxProjects: number;
-    maxServers: number;
     maxDatabases: number;
     maxStorage: number;
   };
@@ -190,19 +189,20 @@ function PlanCard({ plan, onEdit, onDelete }: any) {
 
         <div className="mb-6">
           <span className="text-4xl font-bold text-gray-900 dark:text-white">
-            R$ {plan.price}
+            R$ {plan.pricePerServer}
           </span>
           <span className="text-gray-600 dark:text-gray-400">
-            /{plan.interval === 'monthly' ? 'mês' : 'ano'}
+            /servidor/{plan.interval === 'monthly' ? 'mês' : 'ano'}
           </span>
         </div>
 
         <div className="space-y-3 mb-6">
           <div className="text-sm">
-            <span className="font-medium text-gray-700 dark:text-gray-300">Limites:</span>
+            <span className="font-medium text-gray-700 dark:text-gray-300">Limites por Servidor:</span>
             <ul className="mt-2 space-y-1 text-gray-600 dark:text-gray-400">
               <li>• {plan.limits.maxProjects} projetos</li>
-              <li>• {plan.limits.maxServers} servidores</li>
+              <li>• {plan.limits.maxDatabases} bancos de dados</li>
+              <li>• {plan.limits.maxStorage}GB armazenamento</li>
             </ul>
           </div>
         </div>
@@ -233,12 +233,13 @@ function PlanModal({ plan, onClose, onSaved }: any) {
   const [formData, setFormData] = useState({
     name: plan?.name || '',
     description: plan?.description || '',
-    price: plan?.price || 0,
+    pricePerServer: plan?.pricePerServer || 0,
     interval: plan?.interval || 'monthly',
     features: plan?.features || [''],
     limits: {
-      maxProjects: plan?.limits?.maxProjects || 5,
-      maxServers: plan?.limits?.maxServers || 2,
+      maxProjects: plan?.limits?.maxProjects || 100,
+      maxDatabases: plan?.limits?.maxDatabases || 50,
+      maxStorage: plan?.limits?.maxStorage || 100,
     },
     isActive: plan?.isActive ?? true,
     isPopular: plan?.isPopular || false,
@@ -324,12 +325,12 @@ function PlanModal({ plan, onClose, onSaved }: any) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Preço (R$)
+                  Preço por Servidor (R$)
                 </label>
                 <input
                   type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+                  value={formData.pricePerServer}
+                  onChange={(e) => setFormData({ ...formData, pricePerServer: parseFloat(e.target.value) })}
                   required
                   min="0"
                   step="0.01"
@@ -365,7 +366,7 @@ function PlanModal({ plan, onClose, onSaved }: any) {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Máx. Projetos
@@ -385,14 +386,31 @@ function PlanModal({ plan, onClose, onSaved }: any) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Máx. Servidores
+                  Máx. Bancos de Dados
                 </label>
                 <input
                   type="number"
-                  value={formData.limits.maxServers}
+                  value={formData.limits.maxDatabases}
                   onChange={(e) => setFormData({
                     ...formData,
-                    limits: { ...formData.limits, maxServers: parseInt(e.target.value) }
+                    limits: { ...formData.limits, maxDatabases: parseInt(e.target.value) }
+                  })}
+                  required
+                  min="1"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Máx. Armazenamento (GB)
+                </label>
+                <input
+                  type="number"
+                  value={formData.limits.maxStorage}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    limits: { ...formData.limits, maxStorage: parseInt(e.target.value) }
                   })}
                   required
                   min="1"

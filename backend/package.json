@@ -16,7 +16,8 @@
     "list-projects": "node scripts/list-projects.js",
     "delete-project": "node scripts/delete-project.js",
     "clear-servers": "node scripts/clear-servers.js",
-    "remove-unique-index": "node scripts/remove-unique-index.js"
+    "remove-unique-index": "node scripts/remove-unique-index.js",
+    "migrate-plans": "node scripts/migrate-plans.js"
   },
   "dependencies": {
     "archiver": "^6.0.1",
