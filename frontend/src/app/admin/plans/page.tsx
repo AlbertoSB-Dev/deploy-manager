@@ -8,6 +8,8 @@ import { Plus, Edit, Trash2, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
+export const dynamic = 'force-dynamic';
+
 interface Plan {
   _id: string;
   name: string;

@@ -8,6 +8,8 @@ import { Search, Edit, Trash2, X, Check } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
+export const dynamic = 'force-dynamic';
+
 interface User {
   _id: string;
   name: string;

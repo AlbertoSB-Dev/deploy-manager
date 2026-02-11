@@ -5,6 +5,8 @@ import { Settings, Save, Globe, Key, Server, RefreshCw, Download, GitBranch, Pac
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+export const dynamic = 'force-dynamic';
+
 interface SystemInfo {
   version: string;
   gitCommit: string;
