@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Rocket, RotateCcw, Plus, Trash2, Loader, AlertTriangle, CheckCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { io } from 'socket.io-client';
+import dynamic from 'next/dynamic';
 
 interface PanelVersion {
   _id: string;
@@ -14,6 +14,14 @@ interface PanelVersion {
   status: 'building' | 'ready' | 'failed';
   createdAt: string;
   createdBy: string;
+}
+
+let io: any = null;
+
+// Importar Socket.IO apenas no cliente
+if (typeof window !== 'undefined') {
+  const { io: socketIO } = require('socket.io-client');
+  io = socketIO;
 }
 
 export default function PanelDeployManager() {
@@ -30,7 +38,9 @@ export default function PanelDeployManager() {
   useEffect(() => {
     loadVersions();
     
-    // Conectar ao Socket.IO para logs em tempo real
+    // Conectar ao Socket.IO apenas no cliente
+    if (typeof window === 'undefined' || !io) return;
+
     const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001', {
       reconnection: true,
       reconnectionDelay: 1000,
