@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Mail, ArrowLeft } from 'lucide-react';
-import { ArkLogoImage } from '@/components/ArkLogoImage';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center mb-8">
-          <ArkLogoPNG size={60} showText={true} />
+          <Image src="/logo.png" alt="Ark Deploy" width={60} height={60} />
         </Link>
 
         {/* Card */}
