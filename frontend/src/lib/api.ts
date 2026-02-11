@@ -1,12 +1,48 @@
 import axios from 'axios';
 
+// Detectar URL da API automaticamente baseado no ambiente
+const getApiUrl = () => {
+  // Se estiver no servidor (SSR), usar variável de ambiente
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
+  }
+  
+  // Se estiver no cliente, detectar baseado na URL atual
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
+  // Se for localhost, usar localhost
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:8001/api';
+  }
+  
+  // Se for IP direto (ex: 38.242.213.195)
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    return `${protocol}//${hostname}:8001/api`;
+  }
+  
+  // Se for domínio sslip.io (ex: painel.38.242.213.195.sslip.io)
+  if (hostname.includes('sslip.io')) {
+    // Extrair IP do domínio
+    const ipMatch = hostname.match(/(\d+\.\d+\.\d+\.\d+)/);
+    if (ipMatch) {
+      return `${protocol}//api.${ipMatch[1]}.sslip.io/api`;
+    }
+  }
+  
+  // Fallback para variável de ambiente
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
+};
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api',
+  baseURL: getApiUrl(),
   headers: {
     'Content-Type': 'application/json'
   },
   withCredentials: true
 });
+
+console.log('🌐 API URL configurada:', getApiUrl());
 
 // Interceptor para adicionar token automaticamente
 api.interceptors.request.use(
