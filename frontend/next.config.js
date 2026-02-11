@@ -10,6 +10,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
+  // Desabilitar export estático para evitar erros com páginas dinâmicas
+  staticPageGenerationTimeout: 0,
+  
   // Configurar root do projeto para evitar warning de múltiplos lockfiles
   outputFileTracingRoot: require('path').join(__dirname, '../'),
   
