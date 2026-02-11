@@ -12,7 +12,7 @@ RUN npm install
 COPY . .
 
 # Expor porta
-EXPOSE 3000
+EXPOSE 8000
 
 # Rodar em modo desenvolvimento (mais estável)
 CMD ["npm", "run", "dev"]

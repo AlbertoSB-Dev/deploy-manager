@@ -68,12 +68,12 @@ services:
       - ark-deploy-network
       - coolify
     ports:
-      - "8000:3000"
+      - "8000:8000"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.ark-deploy.rule=Host(`ark-deploy.${SERVER_IP:-localhost}.sslip.io`)"
       - "traefik.http.routers.ark-deploy.entrypoints=web"
-      - "traefik.http.services.ark-deploy.loadbalancer.server.port=3000"
+      - "traefik.http.services.ark-deploy.loadbalancer.server.port=8000"
       - "traefik.docker.network=coolify"
     depends_on:
       - backend
