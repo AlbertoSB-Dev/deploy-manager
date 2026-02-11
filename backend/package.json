@@ -19,7 +19,8 @@
     "remove-unique-index": "node scripts/remove-unique-index.js",
     "migrate-plans": "node scripts/migrate-plans.js",
     "add-discount-tiers": "node scripts/add-discount-tiers.js",
-    "seed-plans-with-discounts": "node scripts/seed-plans-with-discounts.js"
+    "seed-plans-with-discounts": "node scripts/seed-plans-with-discounts.js",
+    "make-super-admin": "node scripts/make-super-admin.js"
   },
   "dependencies": {
     "archiver": "^6.0.1",

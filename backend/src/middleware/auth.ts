@@ -71,12 +71,26 @@ export const protect = async (
 
 // Middleware para verificar se é admin
 export const admin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'super_admin')) {
     next();
   } else {
     res.status(403).json({
       success: false,
       error: 'Acesso negado. Apenas administradores.',
+    });
+  }
+};
+
+/**
+ * Middleware para verificar se é super admin
+ */
+export const superAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user && req.user.role === 'super_admin') {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      error: 'Acesso negado. Apenas super administradores.',
     });
   }
 };
