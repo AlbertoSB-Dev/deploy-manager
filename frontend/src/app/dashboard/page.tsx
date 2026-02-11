@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, RefreshCw, Moon, Sun, LogOut, User as UserIcon, Search } from 'lucide-react';
-import { ArkLogoImage, ArkIconImage } from '@/components/ArkLogoImage';
+import { ArkLogoPNG, ArkIconPNG } from '@/components/ArkLogoPNG';
 import { api } from '@/lib/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -116,7 +116,7 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="mb-4 flex justify-center">
-            <ArkLogoImage size={80} showText={false} />
+            <ArkIconPNG size={80} />
           </div>
           <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
         </div>

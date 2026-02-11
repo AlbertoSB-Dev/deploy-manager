@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { GitBranch, Terminal, Zap, Shield, Globe, CheckCircle, ArrowRight, Github, Server, Clock } from 'lucide-react';
-import { ArkLogoImage, ArkIconImage } from '@/components/ArkLogoImage';
+import { ArkLogoPNG, ArkIconPNG } from '@/components/ArkLogoPNG';
 
 export default function LandingPage() {
   const [terminalLines, setTerminalLines] = useState<string[]>([]);
