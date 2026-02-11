@@ -9,6 +9,7 @@ export class PanelDeployService {
   private panelPath = '/opt/ark-deploy';
   private panelGitUrl = process.env.PANEL_GIT_URL || 'https://github.com/AlbertoSB-Dev/deploy-manager.git';
   private panelGitBranch = process.env.PANEL_GIT_BRANCH || 'main';
+  private panelGitToken = process.env.PANEL_GIT_TOKEN || ''; // Token para repositórios privados
   private io: any = null;
 
   setIO(io: any) {
@@ -23,6 +24,14 @@ export class PanelDeployService {
         timestamp: new Date().toISOString()
       });
     }
+  }
+
+  private getGitUrl(): string {
+    if (this.panelGitToken) {
+      // Adicionar token na URL para autenticação em repositórios privados
+      return this.panelGitUrl.replace('https://', `https://${this.panelGitToken}@`);
+    }
+    return this.panelGitUrl;
   }
 
   async getVersions() {
@@ -50,12 +59,22 @@ export class PanelDeployService {
     try {
       this.emitLog('📡 Sincronizando com GitHub...');
       
+      const gitUrl = this.getGitUrl();
+      
       // Verificar se repositório existe
       const { stdout: checkRepo } = await execAsync(`test -d ${this.panelPath}/.git && echo "exists" || echo "missing"`);
       
       if (checkRepo.trim() === 'missing') {
         this.emitLog('📥 Clonando repositório do GitHub...');
-        await execAsync(`git clone ${this.panelGitUrl} ${this.panelPath}`, { timeout: 60000 });
+        if (this.panelGitToken) {
+          this.emitLog('🔐 Usando token de autenticação...');
+        }
+        await execAsync(`GIT_TERMINAL_PROMPT=0 git clone ${gitUrl} ${this.panelPath}`, { timeout: 60000 });
+      }
+      
+      // Configurar credenciais se token disponível
+      if (this.panelGitToken) {
+        await execAsync(`cd ${this.panelPath} && git config credential.helper store`, { timeout: 10000 });
       }
       
       // Fetch latest changes
