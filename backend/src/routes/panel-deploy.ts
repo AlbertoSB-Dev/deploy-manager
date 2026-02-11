@@ -13,6 +13,20 @@ const isAdmin = (req: AuthRequest, res: any, next: any) => {
   next();
 };
 
+// Sincronizar com GitHub
+router.post('/sync-github', protect, isAdmin, async (req: AuthRequest, res) => {
+  try {
+    const commit = await panelDeployService.syncFromGitHub();
+    
+    res.json({
+      message: 'Sincronização com GitHub concluída',
+      commit
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Obter todas as versões do painel
 router.get('/versions', protect, isAdmin, async (req: AuthRequest, res) => {
   try {

@@ -1,11 +1,14 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import PanelVersion from '../models/PanelVersion';
+import { GitService } from './GitService';
 
 const execAsync = promisify(exec);
 
 export class PanelDeployService {
   private panelPath = '/opt/ark-deploy';
+  private panelGitUrl = process.env.PANEL_GIT_URL || 'https://github.com/AlbertoSB-Dev/deploy-manager.git';
+  private panelGitBranch = process.env.PANEL_GIT_BRANCH || 'main';
   private io: any = null;
 
   setIO(io: any) {
@@ -43,6 +46,34 @@ export class PanelDeployService {
     }
   }
 
+  async syncFromGitHub(): Promise<string> {
+    try {
+      this.emitLog('📡 Sincronizando com GitHub...');
+      
+      // Verificar se repositório existe
+      const { stdout: checkRepo } = await execAsync(`test -d ${this.panelPath}/.git && echo "exists" || echo "missing"`);
+      
+      if (checkRepo.trim() === 'missing') {
+        this.emitLog('📥 Clonando repositório do GitHub...');
+        await execAsync(`git clone ${this.panelGitUrl} ${this.panelPath}`, { timeout: 60000 });
+      }
+      
+      // Fetch latest changes
+      this.emitLog('🔄 Buscando atualizações...');
+      await execAsync(`cd ${this.panelPath} && git fetch origin`, { timeout: 30000 });
+      
+      // Get latest commit
+      const { stdout: commit } = await execAsync(`cd ${this.panelPath} && git rev-parse origin/${this.panelGitBranch}`);
+      
+      this.emitLog(`✅ Sincronização concluída. Commit: ${commit.trim().substring(0, 8)}`);
+      
+      return commit.trim();
+    } catch (error: any) {
+      this.emitLog(`❌ Erro ao sincronizar com GitHub: ${error.message}`);
+      throw error;
+    }
+  }
+
   async deployVersion(version: string, deployedBy: string = 'admin'): Promise<any> {
     const versionRecord = await PanelVersion.findOne({ version });
     
@@ -57,7 +88,11 @@ export class PanelDeployService {
     try {
       this.emitLog(`🚀 Iniciando deploy da versão ${version}...`);
       
-      // 1. Parar containers atuais
+      // 1. Sincronizar com GitHub
+      this.emitLog('📡 Sincronizando com GitHub...');
+      await this.syncFromGitHub();
+      
+      // 2. Parar containers atuais
       this.emitLog('⏹️ Parando containers atuais...');
       try {
         await execAsync(`cd ${this.panelPath} && docker-compose down`, { timeout: 30000 });
@@ -65,11 +100,11 @@ export class PanelDeployService {
         this.emitLog('⚠️ Erro ao parar containers (continuando...)');
       }
 
-      // 2. Fazer checkout da versão
+      // 3. Fazer checkout da versão
       this.emitLog(`📦 Fazendo checkout da versão ${version}...`);
       await execAsync(`cd ${this.panelPath} && git fetch origin && git checkout ${version}`, { timeout: 60000 });
 
-      // 3. Limpar cache do frontend
+      // 4. Limpar cache do frontend
       this.emitLog('🧹 Limpando cache do frontend...');
       try {
         await execAsync(`cd ${this.panelPath}/frontend && rm -rf .next`, { timeout: 30000 });
@@ -77,11 +112,11 @@ export class PanelDeployService {
         this.emitLog('⚠️ Erro ao limpar cache (continuando...)');
       }
 
-      // 4. Fazer build do frontend
+      // 5. Fazer build do frontend
       this.emitLog('🔨 Fazendo build do frontend...');
       await execAsync(`cd ${this.panelPath} && docker-compose build --no-cache frontend`, { timeout: 600000 }); // 10 minutos
 
-      // 5. Fazer build do backend (se necessário)
+      // 6. Fazer build do backend (se necessário)
       this.emitLog('🔨 Fazendo build do backend...');
       try {
         await execAsync(`cd ${this.panelPath} && docker-compose build --no-cache backend`, { timeout: 600000 });
@@ -89,15 +124,15 @@ export class PanelDeployService {
         this.emitLog('⚠️ Erro ao fazer build do backend (continuando...)');
       }
 
-      // 6. Iniciar containers
+      // 7. Iniciar containers
       this.emitLog('🚀 Iniciando containers...');
       await execAsync(`cd ${this.panelPath} && docker-compose up -d`, { timeout: 60000 });
 
-      // 7. Aguardar containers ficarem saudáveis
+      // 8. Aguardar containers ficarem saudáveis
       this.emitLog('⏳ Aguardando containers ficarem saudáveis...');
       await this.waitForContainersHealth(120000); // 2 minutos
 
-      // 8. Atualizar registro de versão
+      // 9. Atualizar registro de versão
       versionRecord.status = 'ready';
       versionRecord.createdBy = deployedBy;
       await versionRecord.save();
