@@ -16,6 +16,10 @@ interface Plan {
   price?: number;
   interval: 'monthly' | 'yearly';
   features: string[];
+  discountTiers?: Array<{
+    minServers: number;
+    discountPercent: number;
+  }>;
   isActive: boolean;
   isPopular: boolean;
 }
@@ -48,7 +52,22 @@ export default function PricingPage() {
 
   const selectedPlanData = plans.find(p => p._id === selectedPlan);
   const pricePerServer = selectedPlanData ? (selectedPlanData.pricePerServer || selectedPlanData.price || 0) : 0;
-  const totalPrice = pricePerServer * servers;
+  
+  // Calcular desconto aplicável
+  let discountPercent = 0;
+  if (selectedPlanData?.discountTiers && selectedPlanData.discountTiers.length > 0) {
+    const sortedTiers = [...selectedPlanData.discountTiers].sort((a, b) => b.minServers - a.minServers);
+    for (const tier of sortedTiers) {
+      if (servers >= tier.minServers) {
+        discountPercent = tier.discountPercent;
+        break;
+      }
+    }
+  }
+  
+  const subtotal = pricePerServer * servers;
+  const discount = (subtotal * discountPercent) / 100;
+  const totalPrice = subtotal - discount;
 
   if (loading) {
     return (
@@ -184,6 +203,20 @@ export default function PricingPage() {
                   <span className="text-gray-700 dark:text-gray-300">Quantidade:</span>
                   <span className="font-semibold text-gray-900 dark:text-white">{servers}x</span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-700 dark:text-gray-300">Subtotal:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    R$ {subtotal.toFixed(2)}
+                  </span>
+                </div>
+                {discountPercent > 0 && (
+                  <div className="flex justify-between text-sm bg-green-50 dark:bg-green-900/20 p-2 rounded">
+                    <span className="text-green-700 dark:text-green-400 font-medium">Desconto {discountPercent}%:</span>
+                    <span className="font-semibold text-green-700 dark:text-green-400">
+                      -R$ {discount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 <div className="border-t border-blue-200 dark:border-blue-800 pt-2 mt-2">
                   <div className="flex justify-between">
                     <span className="font-semibold text-gray-900 dark:text-white">Total:</span>
@@ -208,13 +241,31 @@ export default function PricingPage() {
 
             {/* Informações do Plano */}
             {selectedPlanData && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Recursos Inclusos:</h4>
-                <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-600" />
-                    Projetos ilimitados
-                  </li>
+              <div className="space-y-4">
+                {/* Faixas de Desconto */}
+                {selectedPlanData.discountTiers && selectedPlanData.discountTiers.length > 0 && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                    <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-3">💰 Descontos por Quantidade:</h4>
+                    <ul className="space-y-2 text-sm">
+                      {[...selectedPlanData.discountTiers]
+                        .sort((a, b) => a.minServers - b.minServers)
+                        .map((tier, idx) => (
+                          <li key={idx} className="flex items-center justify-between text-amber-800 dark:text-amber-300">
+                            <span>{tier.minServers}+ servidores:</span>
+                            <span className="font-semibold">{tier.discountPercent}% OFF</span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Recursos Inclusos:</h4>
+                  <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-600" />
+                      Projetos ilimitados
+                    </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-green-600" />
                     Bancos de dados ilimitados
@@ -224,6 +275,7 @@ export default function PricingPage() {
                     Armazenamento ilimitado
                   </li>
                 </ul>
+                </div>
               </div>
             )}
           </div>

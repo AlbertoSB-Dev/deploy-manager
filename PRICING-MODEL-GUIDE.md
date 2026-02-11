@@ -1,8 +1,10 @@
-# Guia do Novo Modelo de Preços
+# Guia do Novo Modelo de Preços com Descontos por Quantidade
 
 ## 📋 Visão Geral
 
-O sistema foi refatorado para um modelo de preços **por servidor com acesso ilimitado**. Você vende acesso ao painel e ao sistema de gerenciamento, não a VPS em si. Os clientes conectam suas próprias VPS e têm acesso ilimitado a projetos, bancos de dados e armazenamento.
+O sistema foi refatorado para um modelo de preços **por servidor com acesso ilimitado e descontos progressivos**. Você vende acesso ao painel e ao sistema de gerenciamento, não a VPS em si. Os clientes conectam suas próprias VPS e têm acesso ilimitado a projetos, bancos de dados e armazenamento.
+
+**Novidade**: Quanto mais servidores o cliente adicionar, maior o desconto!
 
 ### Modelo Antigo ❌
 - Preço fixo por plano
@@ -12,6 +14,7 @@ O sistema foi refatorado para um modelo de preços **por servidor com acesso ili
 ### Modelo Novo ✅
 - Preço **por servidor**
 - Sem limites de projetos, bancos de dados ou armazenamento
+- **Descontos progressivos** por quantidade de servidores
 - Acesso completo ao painel para gerenciar a VPS do cliente
 
 ---
@@ -27,46 +30,47 @@ interface IPlan {
   pricePerServer: number;        // Preço por servidor
   interval: 'monthly' | 'yearly';
   features: string[];            // Funcionalidades do plano
+  discountTiers: Array<{
+    minServers: number;          // A partir de quantos servidores
+    discountPercent: number;     // Percentual de desconto (ex: 10 = 10%)
+  }>;
   isActive: boolean;
   isPopular: boolean;
 }
 ```
 
-**Nota**: Sem campo `limits` - todos os planos têm acesso ilimitado!
-
 ---
 
-## 🚀 Migração de Dados
-
-Se você tem planos antigos no banco de dados, execute o script de migração:
-
-```bash
-cd backend
-npm run migrate-plans
-```
-
-Este script:
-1. Encontra todos os planos com o campo `price` (modelo antigo)
-2. Copia o valor para `pricePerServer`
-3. Remove o campo `limits` (não mais necessário)
-4. Salva as alterações
-
----
-
-## 💰 Como Funciona a Precificação
+## 💰 Como Funciona a Precificação com Descontos
 
 ### Exemplo Prático
 
 **Plano: Professional**
 - Preço por servidor: R$ 99/mês
-- Cliente escolhe: 5 servidores
-- **Total: R$ 495/mês**
-- **Acesso**: Ilimitado a projetos, bancos de dados e armazenamento em cada servidor
+- Faixas de desconto:
+  - 5+ servidores: 10% OFF
+  - 10+ servidores: 15% OFF
+  - 20+ servidores: 20% OFF
 
-A fórmula é simples:
-```
-Total = pricePerServer × quantidade_de_servidores
-```
+**Cenários:**
+
+1. **Cliente com 3 servidores:**
+   - 3 × R$ 99 = R$ 297/mês (sem desconto)
+
+2. **Cliente com 5 servidores:**
+   - 5 × R$ 99 = R$ 495
+   - Desconto 10%: -R$ 49,50
+   - **Total: R$ 445,50/mês**
+
+3. **Cliente com 10 servidores:**
+   - 10 × R$ 99 = R$ 990
+   - Desconto 15%: -R$ 148,50
+   - **Total: R$ 841,50/mês**
+
+4. **Cliente com 20 servidores:**
+   - 20 × R$ 99 = R$ 1.980
+   - Desconto 20%: -R$ 396
+   - **Total: R$ 1.584/mês**
 
 ---
 
@@ -76,11 +80,12 @@ A página `/pricing` agora permite que o cliente:
 
 1. **Selecione um plano** da lista de planos ativos
 2. **Escolha a quantidade de servidores** com um slider (1-100)
-3. **Veja o preço total em tempo real**
-4. **Visualize os recursos inclusos** (acesso ilimitado)
+3. **Veja o desconto aplicável em tempo real**
+4. **Visualize o preço total com desconto**
+5. **Veja as faixas de desconto disponíveis**
 
 ### Componentes Atualizados
-- `frontend/src/app/pricing/page.tsx` - Página de preços com calculadora
+- `frontend/src/app/pricing/page.tsx` - Página de preços com calculadora e descontos
 
 ---
 
@@ -89,24 +94,26 @@ A página `/pricing` agora permite que o cliente:
 A página `/admin/plans` foi atualizada para:
 
 1. **Criar/Editar planos** com `pricePerServer`
-2. **Definir funcionalidades** do plano
-3. **Sem limites** - todos têm acesso ilimitado
+2. **Definir faixas de desconto** por quantidade de servidores
+3. **Gerenciar funcionalidades** do plano
 
 ### Campos do Formulário
 - Nome do Plano
 - Descrição
 - **Preço por Servidor**
 - Intervalo (Mensal/Anual)
+- **Faixas de Desconto** (novo):
+  - A partir de X servidores: Y% de desconto
 - Funcionalidades (ex: "Suporte prioritário", "Backups automáticos")
 - Status (Ativo/Inativo)
 - Marcar como Popular
 
 ### Componentes Atualizados
-- `frontend/src/app/admin/plans/page.tsx` - Gerenciamento de planos
+- `frontend/src/app/admin/plans/page.tsx` - Gerenciamento de planos com descontos
 
 ---
 
-## 📊 Exemplo de Planos
+## 📊 Exemplo de Planos com Descontos
 
 ```javascript
 // Plano Starter
@@ -119,6 +126,10 @@ A página `/admin/plans` foi atualizada para:
     "Deploy automático",
     "Suporte por email",
     "Acesso ilimitado a projetos"
+  ],
+  discountTiers: [
+    { minServers: 5, discountPercent: 5 },
+    { minServers: 10, discountPercent: 10 }
   ],
   isActive: true,
   isPopular: false
@@ -135,6 +146,11 @@ A página `/admin/plans` foi atualizada para:
     "Suporte prioritário",
     "Backups automáticos",
     "Acesso ilimitado a projetos e bancos de dados"
+  ],
+  discountTiers: [
+    { minServers: 5, discountPercent: 10 },
+    { minServers: 10, discountPercent: 15 },
+    { minServers: 20, discountPercent: 20 }
   ],
   isActive: true,
   isPopular: true
@@ -153,6 +169,12 @@ A página `/admin/plans` foi atualizada para:
     "SLA garantido",
     "Acesso ilimitado a tudo"
   ],
+  discountTiers: [
+    { minServers: 5, discountPercent: 15 },
+    { minServers: 10, discountPercent: 20 },
+    { minServers: 20, discountPercent: 25 },
+    { minServers: 50, discountPercent: 30 }
+  ],
   isActive: true,
   isPopular: false
 }
@@ -167,27 +189,60 @@ O código foi atualizado para suportar **ambos os formatos** durante a transiç�
 ```typescript
 // Funciona com planos antigos e novos
 const pricePerServer = plan.pricePerServer || plan.price || 0;
+
+// Calcula desconto se existir
+let discountPercent = 0;
+if (plan.discountTiers && plan.discountTiers.length > 0) {
+  const sortedTiers = [...plan.discountTiers].sort((a, b) => b.minServers - a.minServers);
+  for (const tier of sortedTiers) {
+    if (servers >= tier.minServers) {
+      discountPercent = tier.discountPercent;
+      break;
+    }
+  }
+}
 ```
 
-Isso garante que:
-- Planos antigos com `price` continuam funcionando
-- Planos novos com `pricePerServer` funcionam normalmente
-- Após migração, todos usam `pricePerServer`
+---
+
+## 🧮 Serviço de Cálculo de Preços
+
+Novo serviço `PricingService.ts` para cálculos centralizados:
+
+```typescript
+import { PricingService } from '@/services/PricingService';
+
+// Calcular preço com desconto
+const calculation = PricingService.calculatePrice(plan, 10);
+
+// Resultado:
+{
+  pricePerServer: 99,
+  quantity: 10,
+  discountPercent: 15,
+  subtotal: 990,
+  discount: 148.50,
+  total: 841.50
+}
+
+// Formatar para exibição
+const formatted = PricingService.formatPricing(calculation);
+// "R$ 99.00 × 10 = R$ 990.00 - 15% desconto (R$ 148.50) = R$ 841.50"
+```
 
 ---
 
 ## 📝 Checklist de Implementação
 
-- [x] Atualizar modelo `Plan.ts` com `pricePerServer`
-- [x] Remover `limits` do modelo
-- [x] Atualizar página de preços (`/pricing`)
-- [x] Atualizar página de admin (`/admin/plans`)
-- [x] Criar script de migração
+- [x] Atualizar modelo `Plan.ts` com `discountTiers`
+- [x] Criar `PricingService.ts` para cálculos
+- [x] Atualizar página de preços (`/pricing`) com descontos
+- [x] Atualizar página de admin (`/admin/plans`) com gerenciamento de descontos
 - [x] Adicionar compatibilidade com planos antigos
-- [ ] Executar migração no banco de dados
+- [ ] Executar migração no banco de dados (se necessário)
 - [ ] Testar pricing page com novos planos
 - [ ] Testar admin plans page
-- [ ] Criar novos planos com novo modelo
+- [ ] Criar novos planos com descontos
 
 ---
 
@@ -196,29 +251,34 @@ Isso garante que:
 1. **Criar um novo plano** via `/admin/plans`:
    - Nome: "Test Plan"
    - Preço por Servidor: 50
+   - Faixas de Desconto:
+     - 5+ servidores: 10% OFF
+     - 10+ servidores: 15% OFF
    - Funcionalidades: "Suporte por email", "Deploy automático"
 
 2. **Acessar `/pricing`**:
    - Selecionar o novo plano
-   - Mover o slider para diferentes quantidades
-   - Verificar se o preço total é calculado corretamente
+   - Mover o slider para 3 servidores: R$ 150 (sem desconto)
+   - Mover o slider para 5 servidores: R$ 225 (10% OFF = R$ 22,50 de desconto)
+   - Mover o slider para 10 servidores: R$ 425 (15% OFF = R$ 75 de desconto)
 
-3. **Verificar recursos**:
-   - Confirmar que mostra "Acesso ilimitado" para projetos, bancos de dados e armazenamento
+3. **Verificar descontos**:
+   - Confirmar que o desconto é aplicado corretamente
+   - Verificar que as faixas de desconto são exibidas
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Erro: "Cannot read properties of undefined"
-**Causa**: Plano antigo sem `pricePerServer`
-**Solução**: Executar `npm run migrate-plans`
+### Desconto não aparece
+**Causa**: Plano sem `discountTiers` ou faixas vazias
+**Solução**: Editar o plano e adicionar faixas de desconto
 
-### Preço não aparece na página de preços
-**Causa**: Plano não tem `pricePerServer` nem `price`
-**Solução**: Editar o plano e definir o preço
+### Desconto errado
+**Causa**: Faixas de desconto não ordenadas corretamente
+**Solução**: O sistema ordena automaticamente, mas verifique os valores
 
-### Campos de limites ainda aparecem
+### Campo de descontos não aparece no admin
 **Causa**: Cache do navegador
 **Solução**: Limpar cache (Ctrl+Shift+Delete) e recarregar
 
@@ -226,8 +286,9 @@ Isso garante que:
 
 ## 📞 Suporte
 
-Para dúvidas sobre o novo modelo de preços, consulte:
+Para dúvidas sobre o novo modelo de preços com descontos, consulte:
 - Este guia
 - Código em `backend/src/models/Plan.ts`
+- Serviço em `backend/src/services/PricingService.ts`
 - Página de preços em `frontend/src/app/pricing/page.tsx`
 - Admin plans em `frontend/src/app/admin/plans/page.tsx`

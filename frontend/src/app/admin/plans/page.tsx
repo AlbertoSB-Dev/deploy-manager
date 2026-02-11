@@ -17,6 +17,10 @@ interface Plan {
   pricePerServer: number;
   interval: 'monthly' | 'yearly';
   features: string[];
+  discountTiers?: Array<{
+    minServers: number;
+    discountPercent: number;
+  }>;
   isActive: boolean;
   isPopular: boolean;
 }
@@ -231,6 +235,7 @@ function PlanModal({ plan, onClose, onSaved }: any) {
     pricePerServer: plan?.pricePerServer || 0,
     interval: plan?.interval || 'monthly',
     features: plan?.features || [''],
+    discountTiers: plan?.discountTiers || [{ minServers: 5, discountPercent: 10 }],
     isActive: plan?.isActive ?? true,
     isPopular: plan?.isPopular || false,
   });
@@ -280,6 +285,26 @@ function PlanModal({ plan, onClose, onSaved }: any) {
     const newFeatures = [...formData.features];
     newFeatures[index] = value;
     setFormData({ ...formData, features: newFeatures });
+  };
+
+  const addDiscountTier = () => {
+    setFormData({
+      ...formData,
+      discountTiers: [...formData.discountTiers, { minServers: 10, discountPercent: 15 }],
+    });
+  };
+
+  const removeDiscountTier = (index: number) => {
+    setFormData({
+      ...formData,
+      discountTiers: formData.discountTiers.filter((_: any, i: number) => i !== index),
+    });
+  };
+
+  const updateDiscountTier = (index: number, field: string, value: any) => {
+    const newTiers = [...formData.discountTiers];
+    newTiers[index] = { ...newTiers[index], [field]: value };
+    setFormData({ ...formData, discountTiers: newTiers });
   };
 
   return (
@@ -388,6 +413,58 @@ function PlanModal({ plan, onClose, onSaved }: any) {
                   className="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:border-blue-500 hover:text-blue-500 transition-colors"
                 >
                   + Adicionar Funcionalidade
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Faixas de Desconto por Quantidade
+              </label>
+              <div className="space-y-3">
+                {formData.discountTiers.map((tier: any, index: number) => (
+                  <div key={index} className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <label className="text-xs text-gray-600 dark:text-gray-400">A partir de</label>
+                      <input
+                        type="number"
+                        value={tier.minServers}
+                        onChange={(e) => updateDiscountTier(index, 'minServers', parseInt(e.target.value))}
+                        required
+                        min="1"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                        placeholder="Mín. servidores"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-gray-600 dark:text-gray-400">Desconto %</label>
+                      <input
+                        type="number"
+                        value={tier.discountPercent}
+                        onChange={(e) => updateDiscountTier(index, 'discountPercent', parseFloat(e.target.value))}
+                        required
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                        placeholder="Desconto %"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeDiscountTier(index)}
+                      className="px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addDiscountTier}
+                  className="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+                >
+                  + Adicionar Faixa de Desconto
                 </button>
               </div>
             </div>

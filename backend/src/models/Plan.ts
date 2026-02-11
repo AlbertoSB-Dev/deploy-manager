@@ -6,6 +6,10 @@ export interface IPlan extends Document {
   pricePerServer: number; // Preço por servidor
   interval: 'monthly' | 'yearly';
   features: string[];
+  discountTiers: Array<{
+    minServers: number;
+    discountPercent: number; // Percentual de desconto (ex: 10 = 10%)
+  }>;
   isActive: boolean;
   isPopular: boolean;
   createdAt: Date;
@@ -35,6 +39,19 @@ const PlanSchema = new Schema<IPlan>(
     },
     features: [{
       type: String,
+    }],
+    discountTiers: [{
+      minServers: {
+        type: Number,
+        required: true,
+        min: 1,
+      },
+      discountPercent: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 100,
+      },
     }],
     isActive: {
       type: Boolean,
