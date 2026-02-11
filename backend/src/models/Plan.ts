@@ -3,14 +3,13 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IPlan extends Document {
   name: string;
   description: string;
-  price: number;
+  pricePerServer: number; // Preço por servidor
   interval: 'monthly' | 'yearly';
   features: string[];
   limits: {
-    maxProjects: number;
-    maxServers: number;
+    maxProjects: number; // Projetos ilimitados por servidor
     maxDatabases: number;
-    maxStorage: number; // GB
+    maxStorage: number; // GB por servidor
   };
   isActive: boolean;
   isPopular: boolean;
@@ -29,7 +28,7 @@ const PlanSchema = new Schema<IPlan>(
       type: String,
       required: true,
     },
-    price: {
+    pricePerServer: {
       type: Number,
       required: true,
       min: 0,
@@ -46,22 +45,17 @@ const PlanSchema = new Schema<IPlan>(
       maxProjects: {
         type: Number,
         required: true,
-        default: 5,
-      },
-      maxServers: {
-        type: Number,
-        required: true,
-        default: 2,
+        default: 100, // Projetos ilimitados por servidor
       },
       maxDatabases: {
         type: Number,
         required: true,
-        default: 5,
+        default: 50,
       },
       maxStorage: {
         type: Number,
         required: true,
-        default: 10,
+        default: 100, // GB por servidor
       },
     },
     isActive: {
