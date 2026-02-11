@@ -6,11 +6,6 @@ export interface IPlan extends Document {
   pricePerServer: number; // Preço por servidor
   interval: 'monthly' | 'yearly';
   features: string[];
-  limits: {
-    maxProjects: number; // Projetos ilimitados por servidor
-    maxDatabases: number;
-    maxStorage: number; // GB por servidor
-  };
   isActive: boolean;
   isPopular: boolean;
   createdAt: Date;
@@ -41,23 +36,6 @@ const PlanSchema = new Schema<IPlan>(
     features: [{
       type: String,
     }],
-    limits: {
-      maxProjects: {
-        type: Number,
-        required: true,
-        default: 100, // Projetos ilimitados por servidor
-      },
-      maxDatabases: {
-        type: Number,
-        required: true,
-        default: 50,
-      },
-      maxStorage: {
-        type: Number,
-        required: true,
-        default: 100, // GB por servidor
-      },
-    },
     isActive: {
       type: Boolean,
       default: true,

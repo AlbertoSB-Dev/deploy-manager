@@ -17,11 +17,6 @@ interface Plan {
   pricePerServer: number;
   interval: 'monthly' | 'yearly';
   features: string[];
-  limits: {
-    maxProjects: number;
-    maxDatabases: number;
-    maxStorage: number;
-  };
   isActive: boolean;
   isPopular: boolean;
 }
@@ -198,11 +193,11 @@ function PlanCard({ plan, onEdit, onDelete }: any) {
 
         <div className="space-y-3 mb-6">
           <div className="text-sm">
-            <span className="font-medium text-gray-700 dark:text-gray-300">Limites por Servidor:</span>
+            <span className="font-medium text-gray-700 dark:text-gray-300">Acesso Ilimitado:</span>
             <ul className="mt-2 space-y-1 text-gray-600 dark:text-gray-400">
-              <li>• {plan.limits.maxProjects} projetos</li>
-              <li>• {plan.limits.maxDatabases} bancos de dados</li>
-              <li>• {plan.limits.maxStorage}GB armazenamento</li>
+              <li>✓ Projetos ilimitados</li>
+              <li>✓ Bancos de dados ilimitados</li>
+              <li>✓ Armazenamento ilimitado</li>
             </ul>
           </div>
         </div>
@@ -236,11 +231,6 @@ function PlanModal({ plan, onClose, onSaved }: any) {
     pricePerServer: plan?.pricePerServer || 0,
     interval: plan?.interval || 'monthly',
     features: plan?.features || [''],
-    limits: {
-      maxProjects: plan?.limits?.maxProjects || 100,
-      maxDatabases: plan?.limits?.maxDatabases || 50,
-      maxStorage: plan?.limits?.maxStorage || 100,
-    },
     isActive: plan?.isActive ?? true,
     isPopular: plan?.isPopular || false,
   });
@@ -366,57 +356,7 @@ function PlanModal({ plan, onClose, onSaved }: any) {
               </select>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Máx. Projetos
-                </label>
-                <input
-                  type="number"
-                  value={formData.limits.maxProjects}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    limits: { ...formData.limits, maxProjects: parseInt(e.target.value) }
-                  })}
-                  required
-                  min="1"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Máx. Bancos de Dados
-                </label>
-                <input
-                  type="number"
-                  value={formData.limits.maxDatabases}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    limits: { ...formData.limits, maxDatabases: parseInt(e.target.value) }
-                  })}
-                  required
-                  min="1"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Máx. Armazenamento (GB)
-                </label>
-                <input
-                  type="number"
-                  value={formData.limits.maxStorage}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    limits: { ...formData.limits, maxStorage: parseInt(e.target.value) }
-                  })}
-                  required
-                  min="1"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-4">
             </div>
 
             <div>

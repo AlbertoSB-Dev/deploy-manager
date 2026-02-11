@@ -16,11 +16,6 @@ interface Plan {
   price?: number;
   interval: 'monthly' | 'yearly';
   features: string[];
-  limits: {
-    maxProjects: number;
-    maxDatabases: number;
-    maxStorage: number;
-  };
   isActive: boolean;
   isPopular: boolean;
 }
@@ -214,19 +209,19 @@ export default function PricingPage() {
             {/* Informações do Plano */}
             {selectedPlanData && (
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Limites por Servidor:</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Recursos Inclusos:</h4>
                 <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-green-600" />
-                    Até {selectedPlanData.limits.maxProjects} projetos
+                    Projetos ilimitados
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-green-600" />
-                    Até {selectedPlanData.limits.maxDatabases} bancos de dados
+                    Bancos de dados ilimitados
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-green-600" />
-                    {selectedPlanData.limits.maxStorage}GB de armazenamento
+                    Armazenamento ilimitado
                   </li>
                 </ul>
               </div>

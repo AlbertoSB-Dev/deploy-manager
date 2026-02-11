@@ -2,8 +2,8 @@
 
 /**
  * Migration script to update existing plans from old model to new model
- * Old model: price, maxServers
- * New model: pricePerServer, removed maxServers
+ * Old model: price, maxServers, limits
+ * New model: pricePerServer, no limits (unlimited access)
  */
 
 const mongoose = require('mongoose');
@@ -31,13 +31,13 @@ async function migrate() {
         plan.pricePerServer = plan.price;
         
         // Remover campos antigos
-        if (plan.limits && plan.limits.maxServers) {
-          console.log(`   Removendo maxServers: ${plan.limits.maxServers}`);
-          delete plan.limits.maxServers;
+        if (plan.limits) {
+          console.log(`   Removendo limites antigos`);
+          delete plan.limits;
         }
         
         await plan.save();
-        console.log(`   ✅ Migrado para: R$ ${plan.pricePerServer} por servidor`);
+        console.log(`   ✅ Migrado para: R$ ${plan.pricePerServer} por servidor (acesso ilimitado)`);
         updated++;
       }
     }

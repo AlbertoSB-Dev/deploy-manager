@@ -2,17 +2,17 @@
 
 ## 📋 Visão Geral
 
-O sistema foi refatorado para usar um modelo de preços **por servidor**, removendo a cobrança por projetos. Agora os clientes pagam apenas pela quantidade de servidores que utilizam.
+O sistema foi refatorado para um modelo de preços **por servidor com acesso ilimitado**. Você vende acesso ao painel e ao sistema de gerenciamento, não a VPS em si. Os clientes conectam suas próprias VPS e têm acesso ilimitado a projetos, bancos de dados e armazenamento.
 
 ### Modelo Antigo ❌
 - Preço fixo por plano
 - Limite de servidores por plano
-- Limite de projetos por plano
+- Limite de projetos, bancos de dados e armazenamento
 
 ### Modelo Novo ✅
 - Preço **por servidor**
-- Sem limite de servidores (cliente escolhe quantidade)
-- Limites de projetos, bancos de dados e armazenamento **por servidor**
+- Sem limites de projetos, bancos de dados ou armazenamento
+- Acesso completo ao painel para gerenciar a VPS do cliente
 
 ---
 
@@ -24,18 +24,15 @@ O sistema foi refatorado para usar um modelo de preços **por servidor**, remove
 interface IPlan {
   name: string;
   description: string;
-  pricePerServer: number;        // Preço por servidor (novo)
+  pricePerServer: number;        // Preço por servidor
   interval: 'monthly' | 'yearly';
-  features: string[];
-  limits: {
-    maxProjects: number;         // Por servidor
-    maxDatabases: number;        // Por servidor
-    maxStorage: number;          // GB por servidor
-  };
+  features: string[];            // Funcionalidades do plano
   isActive: boolean;
   isPopular: boolean;
 }
 ```
+
+**Nota**: Sem campo `limits` - todos os planos têm acesso ilimitado!
 
 ---
 
@@ -51,7 +48,7 @@ npm run migrate-plans
 Este script:
 1. Encontra todos os planos com o campo `price` (modelo antigo)
 2. Copia o valor para `pricePerServer`
-3. Remove o campo `maxServers` dos limites
+3. Remove o campo `limits` (não mais necessário)
 4. Salva as alterações
 
 ---
@@ -64,6 +61,7 @@ Este script:
 - Preço por servidor: R$ 99/mês
 - Cliente escolhe: 5 servidores
 - **Total: R$ 495/mês**
+- **Acesso**: Ilimitado a projetos, bancos de dados e armazenamento em cada servidor
 
 A fórmula é simples:
 ```
@@ -79,7 +77,7 @@ A página `/pricing` agora permite que o cliente:
 1. **Selecione um plano** da lista de planos ativos
 2. **Escolha a quantidade de servidores** com um slider (1-100)
 3. **Veja o preço total em tempo real**
-4. **Visualize os limites por servidor**
+4. **Visualize os recursos inclusos** (acesso ilimitado)
 
 ### Componentes Atualizados
 - `frontend/src/app/pricing/page.tsx` - Página de preços com calculadora
@@ -91,22 +89,15 @@ A página `/pricing` agora permite que o cliente:
 A página `/admin/plans` foi atualizada para:
 
 1. **Criar/Editar planos** com `pricePerServer`
-2. **Definir limites por servidor**:
-   - Máx. Projetos
-   - Máx. Bancos de Dados
-   - Máx. Armazenamento (GB)
-3. **Remover campo `maxServers`** (não mais necessário)
+2. **Definir funcionalidades** do plano
+3. **Sem limites** - todos têm acesso ilimitado
 
 ### Campos do Formulário
 - Nome do Plano
 - Descrição
-- **Preço por Servidor** (novo)
+- **Preço por Servidor**
 - Intervalo (Mensal/Anual)
-- Limites por Servidor:
-  - Máx. Projetos
-  - Máx. Bancos de Dados
-  - Máx. Armazenamento (GB)
-- Funcionalidades
+- Funcionalidades (ex: "Suporte prioritário", "Backups automáticos")
 - Status (Ativo/Inativo)
 - Marcar como Popular
 
@@ -124,12 +115,11 @@ A página `/admin/plans` foi atualizada para:
   description: "Perfeito para começar",
   pricePerServer: 49,
   interval: "monthly",
-  features: ["Deploy automático", "Suporte por email"],
-  limits: {
-    maxProjects: 10,
-    maxDatabases: 2,
-    maxStorage: 50
-  },
+  features: [
+    "Deploy automático",
+    "Suporte por email",
+    "Acesso ilimitado a projetos"
+  ],
   isActive: true,
   isPopular: false
 }
@@ -140,12 +130,12 @@ A página `/admin/plans` foi atualizada para:
   description: "Para equipes em crescimento",
   pricePerServer: 99,
   interval: "monthly",
-  features: ["Deploy automático", "Suporte prioritário", "Backups automáticos"],
-  limits: {
-    maxProjects: 50,
-    maxDatabases: 10,
-    maxStorage: 200
-  },
+  features: [
+    "Deploy automático",
+    "Suporte prioritário",
+    "Backups automáticos",
+    "Acesso ilimitado a projetos e bancos de dados"
+  ],
   isActive: true,
   isPopular: true
 }
@@ -156,12 +146,13 @@ A página `/admin/plans` foi atualizada para:
   description: "Solução completa",
   pricePerServer: 199,
   interval: "monthly",
-  features: ["Deploy automático", "Suporte 24/7", "Backups automáticos", "SLA garantido"],
-  limits: {
-    maxProjects: 100,
-    maxDatabases: 50,
-    maxStorage: 500
-  },
+  features: [
+    "Deploy automático",
+    "Suporte 24/7",
+    "Backups automáticos",
+    "SLA garantido",
+    "Acesso ilimitado a tudo"
+  ],
   isActive: true,
   isPopular: false
 }
@@ -188,7 +179,7 @@ Isso garante que:
 ## 📝 Checklist de Implementação
 
 - [x] Atualizar modelo `Plan.ts` com `pricePerServer`
-- [x] Remover `maxServers` do modelo
+- [x] Remover `limits` do modelo
 - [x] Atualizar página de preços (`/pricing`)
 - [x] Atualizar página de admin (`/admin/plans`)
 - [x] Criar script de migração
@@ -205,21 +196,21 @@ Isso garante que:
 1. **Criar um novo plano** via `/admin/plans`:
    - Nome: "Test Plan"
    - Preço por Servidor: 50
-   - Limites: 10 projetos, 5 bancos de dados, 100GB
+   - Funcionalidades: "Suporte por email", "Deploy automático"
 
 2. **Acessar `/pricing`**:
    - Selecionar o novo plano
    - Mover o slider para diferentes quantidades
    - Verificar se o preço total é calculado corretamente
 
-3. **Verificar limites**:
-   - Confirmar que os limites mostrados são "por servidor"
+3. **Verificar recursos**:
+   - Confirmar que mostra "Acesso ilimitado" para projetos, bancos de dados e armazenamento
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Erro: "Cannot read properties of undefined (reading 'toFixed')"
+### Erro: "Cannot read properties of undefined"
 **Causa**: Plano antigo sem `pricePerServer`
 **Solução**: Executar `npm run migrate-plans`
 
@@ -227,7 +218,7 @@ Isso garante que:
 **Causa**: Plano não tem `pricePerServer` nem `price`
 **Solução**: Editar o plano e definir o preço
 
-### Campo "Máx. Servidores" ainda aparece
+### Campos de limites ainda aparecem
 **Causa**: Cache do navegador
 **Solução**: Limpar cache (Ctrl+Shift+Delete) e recarregar
 
