@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, ArrowLeft } from 'lucide-react';
-import { ArkLogoPNG } from '@/components/ArkLogoPNG';
+import { ArkLogoImage } from '@/components/ArkLogoImage';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 
