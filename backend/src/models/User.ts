@@ -15,7 +15,9 @@ export interface IUser extends Document {
     status: 'active' | 'inactive' | 'cancelled' | 'trial';
     startDate?: Date;
     endDate?: Date;
-    trialServersUsed?: number; // Quantos servidores usou no trial
+    trialServersUsed?: number;
+    assasCustomerId?: string;      // ID do cliente no Assas
+    assasSubscriptionId?: string;  // ID da assinatura no Assas
   };
   createdAt: Date;
   updatedAt: Date;
@@ -83,6 +85,12 @@ const UserSchema = new Schema({
     trialServersUsed: {
       type: Number,
       default: 0,
+    },
+    assasCustomerId: {
+      type: String,
+    },
+    assasSubscriptionId: {
+      type: String,
     },
   },
   createdAt: {

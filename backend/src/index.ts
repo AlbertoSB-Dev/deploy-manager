@@ -23,6 +23,7 @@ import wordpressRoutes from './routes/wordpress';
 import backupRoutes from './routes/backups';
 import logsRoutes from './routes/logs';
 import panelDeployRoutes from './routes/panel-deploy';
+import paymentRoutes from './routes/payments';
 import { UpdateCheckerService } from './services/UpdateCheckerService';
 import { panelDeployService } from './services/PanelDeployService';
 
@@ -111,6 +112,7 @@ app.use('/api/wordpress', wordpressRoutes);
 app.use('/api/backups', backupRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/panel-deploy', panelDeployRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

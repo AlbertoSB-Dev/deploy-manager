@@ -12,6 +12,7 @@ export interface IPlan extends Document {
   }>;
   isActive: boolean;
   isPopular: boolean;
+  assasPlanId?: string; // ID do plano no Assas
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,6 +61,9 @@ const PlanSchema = new Schema<IPlan>(
     isPopular: {
       type: Boolean,
       default: false,
+    },
+    assasPlanId: {
+      type: String,
     },
   },
   {
