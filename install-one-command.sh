@@ -101,7 +101,11 @@ sleep 15
 
 # Criar usuário admin
 echo "👤 Criando usuário admin..."
-docker-compose exec -T backend node scripts/make-admin-auto.js || true
+sleep 5  # Aguardar MongoDB estar pronto
+docker-compose exec -T backend node scripts/create-admin.js || {
+    echo "⚠️  Erro ao criar admin automaticamente"
+    echo "   Execute manualmente: docker-compose exec backend node scripts/create-admin.js"
+}
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
