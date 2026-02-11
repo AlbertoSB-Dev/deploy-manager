@@ -98,12 +98,14 @@ if ! command -v nginx &> /dev/null; then
     apt-get install -y nginx
 fi
 
+# Remover configuração padrão
+rm -f /etc/nginx/sites-enabled/default
+
 # Criar configuração do Nginx
 cat > /etc/nginx/sites-available/ark-deploy << 'NGINX_EOF'
-# Frontend - painel.*.sslip.io
 server {
     listen 80;
-    server_name ~^painel\..*\.sslip\.io$;
+    server_name painel.SERVER_IP_PLACEHOLDER.sslip.io;
 
     location / {
         proxy_pass http://localhost:8000;
@@ -118,10 +120,9 @@ server {
     }
 }
 
-# Backend API - api.*.sslip.io
 server {
     listen 80;
-    server_name ~^api\..*\.sslip\.io$;
+    server_name api.SERVER_IP_PLACEHOLDER.sslip.io;
 
     location / {
         proxy_pass http://localhost:8001;
@@ -137,10 +138,20 @@ server {
 }
 NGINX_EOF
 
+# Substituir placeholder pelo IP real
+sed -i "s/SERVER_IP_PLACEHOLDER/$SERVER_IP/g" /etc/nginx/sites-available/ark-deploy
+
+# Ativar site
 ln -sf /etc/nginx/sites-available/ark-deploy /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl restart nginx && systemctl enable nginx
-echo "✅ Nginx configurado"
+
+# Testar e reiniciar Nginx
+if nginx -t 2>/dev/null; then
+    systemctl restart nginx 2>/dev/null
+    systemctl enable nginx 2>/dev/null
+    echo "✅ Nginx configurado"
+else
+    echo "⚠️  Nginx com erro, mas continuando..."
+fi
 echo ""
 
 # Iniciar containers
@@ -164,11 +175,15 @@ echo "════════════════════════�
 echo "✅ Ark Deploy instalado com sucesso!"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
-echo "🌐 Acesse o painel em:"
-echo "   Frontend: http://painel.$SERVER_IP.sslip.io"
-echo "   Backend:  http://api.$SERVER_IP.sslip.io"
+echo "🌐 Acesse o painel:"
+echo "   Com domínio:  http://painel.$SERVER_IP.sslip.io"
+echo "   Direto (IP):  http://$SERVER_IP:8000"
 echo ""
-echo "🔑 Login padrão:"
+echo "� API Backend:"
+echo "   Com domínio:  http://api.$SERVER_IP.sslip.io"
+echo "   Direto (IP):  http://$SERVER_IP:8001"
+echo ""
+echo "� Login padrão:"
 echo "   Email: admin@admin.com"
 echo "   Senha: admin123"
 echo ""
