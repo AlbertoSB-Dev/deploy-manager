@@ -3,17 +3,19 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Variáveis de ambiente para build
-ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copiar package files
 COPY package*.json ./
 
-# Instalar todas as dependências (necessário para build)
+# Instalar TODAS as dependências (incluindo devDependencies para build)
 RUN npm ci
 
 # Copiar código fonte
 COPY . .
+
+# Definir NODE_ENV apenas para o build
+ENV NODE_ENV=production
 
 # Build para produção
 RUN npm run build
