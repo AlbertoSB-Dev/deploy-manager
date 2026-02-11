@@ -2,6 +2,23 @@
 
 Painel centralizado para gerenciar servidores VPS via SSH. Configure, faça deploy e monitore múltiplos servidores sem instalar nada neles. Tudo automatizado.
 
+## ⚡ Instalação em 1 Comando
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AlbertoSB-Dev/deploy-manager/main/install-one-command.sh | bash
+```
+
+**Pronto!** Em 2 minutos você terá:
+- ✅ Docker e Docker Compose instalados
+- ✅ MongoDB configurado
+- ✅ Backend e Frontend rodando
+- ✅ Usuário admin criado (admin@admin.com / admin123)
+- ✅ Domínios automáticos com sslip.io
+
+**Acesse:** `http://painel.SEU_IP.sslip.io`
+
+---
+
 ## ✨ Funcionalidades
 
 - ✅ **Gerenciamento Centralizado** - Controle múltiplos servidores VPS de um único painel
