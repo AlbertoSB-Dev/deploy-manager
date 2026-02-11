@@ -86,6 +86,11 @@ EOF
 echo "✅ Variáveis configuradas"
 echo ""
 
+# Criar rede Docker coolify
+echo "🌐 Criando rede Docker..."
+docker network create coolify 2>/dev/null || echo "✅ Rede coolify já existe"
+echo ""
+
 # Iniciar containers
 echo "🐳 Iniciando containers..."
 docker-compose up -d
