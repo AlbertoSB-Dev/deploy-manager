@@ -1,11 +1,11 @@
+export const dynamic = 'force-dynamic';
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Settings, Save, Globe, Key, Server, RefreshCw, Download, GitBranch, Package, AlertCircle, History, RotateCcw } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
-
-export const dynamic = 'force-dynamic';
 
 interface SystemInfo {
   version: string;

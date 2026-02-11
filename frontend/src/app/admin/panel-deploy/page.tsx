@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -6,8 +8,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-
-export const dynamic = 'force-dynamic';
 
 const PanelDeployManager = dynamic(() => import('@/components/PanelDeployManager'), {
   ssr: false,

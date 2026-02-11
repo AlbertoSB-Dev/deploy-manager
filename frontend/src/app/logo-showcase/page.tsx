@@ -1,6 +1,6 @@
-'use client';
-
 export const dynamic = 'force-dynamic';
+
+'use client';
 
 import { ArkLogo, ArkIcon } from '@/components/ArkLogo';
 import { ArkLogoModern, ArkIconModern } from '@/components/ArkLogoModern';

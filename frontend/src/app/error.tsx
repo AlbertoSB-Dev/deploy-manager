@@ -1,8 +1,8 @@
-'use client';
-
 export const dynamic = 'force-dynamic';
 
-import { useEffect } from 'react';
+'use client';
+
+import { useEffect } };
 
 export default function Error({
   error,

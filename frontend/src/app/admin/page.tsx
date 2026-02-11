@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -6,8 +8,6 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Users, TrendingUp, Server, Database, Package, Activity } from 'lucide-react';
 import Link from 'next/link';
-
-export const dynamic = 'force-dynamic';
 
 interface DashboardStats {
   totalUsers: number;
