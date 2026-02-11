@@ -15,10 +15,13 @@ export interface IUser extends Document {
     status: 'active' | 'inactive' | 'cancelled' | 'trial';
     startDate?: Date;
     endDate?: Date;
+    trialServersUsed?: number; // Quantos servidores usou no trial
   };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  isTrialActive(): boolean;
+  isSubscriptionActive(): boolean;
 }
 
 const UserSchema = new Schema({
@@ -77,6 +80,10 @@ const UserSchema = new Schema({
     endDate: {
       type: Date,
     },
+    trialServersUsed: {
+      type: Number,
+      default: 0,
+    },
   },
   createdAt: {
     type: Date,
@@ -116,6 +123,22 @@ UserSchema.methods.comparePassword = async function (
   } catch (error) {
     return false;
   }
+};
+
+// Método para verificar se trial está ativo
+UserSchema.methods.isTrialActive = function (): boolean {
+  if (this.subscription?.status !== 'trial') return false;
+  if (!this.subscription?.endDate) return false;
+  return new Date() < this.subscription.endDate;
+};
+
+// Método para verificar se assinatura está ativa
+UserSchema.methods.isSubscriptionActive = function (): boolean {
+  if (this.subscription?.status === 'active') {
+    if (!this.subscription?.endDate) return true;
+    return new Date() < this.subscription.endDate;
+  }
+  return false;
 };
 
 export default mongoose.model<IUser>('User', UserSchema);

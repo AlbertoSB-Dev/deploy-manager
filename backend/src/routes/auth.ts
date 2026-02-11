@@ -80,6 +80,12 @@ router.post('/register', async (req: Request, res: Response) => {
       name,
       email,
       password,
+      subscription: {
+        status: 'trial',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 dias
+        trialServersUsed: 0,
+      },
     });
 
     // Gerar token
@@ -189,6 +195,9 @@ router.get('/me', protect, async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const isTrialActive = user.isTrialActive?.();
+    const isSubscriptionActive = user.isSubscriptionActive?.();
+
     res.json({
       success: true,
       data: {
@@ -197,6 +206,16 @@ router.get('/me', protect, async (req: AuthRequest, res: Response) => {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
+        subscription: {
+          status: user.subscription?.status,
+          startDate: user.subscription?.startDate,
+          endDate: user.subscription?.endDate,
+          isTrialActive,
+          isSubscriptionActive,
+          daysRemaining: isTrialActive || isSubscriptionActive
+            ? Math.ceil((user.subscription?.endDate!.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+            : 0,
+        },
       },
     });
   } catch (error: any) {
