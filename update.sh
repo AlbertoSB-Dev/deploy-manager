@@ -1,47 +1,35 @@
 #!/bin/bash
 
-echo "🔄 Atualizando Ark Deploy..."
-echo ""
+# Script para atualizar Ark Deploy
+# Use: ./UPDATE.sh
 
-# Verificar se está no diretório correto
-if [ ! -f "docker-compose.yml" ]; then
-    echo "❌ Erro: Execute este script no diretório deploy-manager"
-    exit 1
-fi
+set -e
 
-# 1. Fazer backup do .env
-if [ -f ".env" ]; then
-    echo "📦 Fazendo backup do .env..."
-    cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
-fi
+cd /opt/ark-deploy
 
-# 2. Baixar atualizações
-echo "⬇️  Baixando atualizações do GitHub..."
-git pull origin main
+echo "📥 Atualizando código..."
+git pull
 
-if [ $? -ne 0 ]; then
-    echo "❌ Erro ao fazer git pull"
-    exit 1
-fi
-
-# 3. Parar containers
-echo "🛑 Parando containers..."
+echo "⏹️  Parando containers..."
 docker-compose down
 
-# 4. Rebuild e iniciar
-echo "🐳 Reconstruindo e iniciando containers..."
-docker-compose up -d --build
+echo "🗑️  Removendo imagens antigas..."
+docker rmi ark-deploy-frontend ark-deploy-backend 2>/dev/null || true
 
-# 5. Aguardar containers iniciarem
-echo "⏳ Aguardando containers iniciarem..."
-sleep 10
+echo "🧹 Limpando cache..."
+docker builder prune -af
+rm -rf frontend/.next backend/dist 2>/dev/null || true
 
-# 6. Verificar status
-echo "📊 Status dos containers:"
-docker-compose ps
+echo "🔨 Reconstruindo em modo PRODUÇÃO..."
+docker-compose build --no-cache --pull
+
+echo "🚀 Iniciando containers..."
+docker-compose up -d
 
 echo ""
 echo "✅ Atualização concluída!"
 echo ""
-echo "📍 Acesse: http://$(curl -s ifconfig.me):8000"
+echo "🌐 Acesse: http://38.242.213.195:8000"
 echo ""
+docker-compose logs --tail=20 frontend
+docker-compose logs --tail=20 backend

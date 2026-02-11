@@ -23,11 +23,11 @@ async function createAdmin() {
     const User = mongoose.model('User', UserSchema);
 
     // Verificar se já existe admin
-    const existingAdmin = await User.findOne({ email: 'admin@admin.com' });
+    const existingAdmin = await User.findOne({ email: 'beto.albertosantanabeto@gmail.com' });
     
     if (existingAdmin) {
       console.log('✅ Usuário admin já existe!');
-      console.log(`   Email: admin@admin.com`);
+      console.log(`   Email: beto.albertosantanabeto@gmail.com`);
       console.log(`   Role: ${existingAdmin.role}`);
       
       if (existingAdmin.role !== 'admin') {
@@ -40,12 +40,12 @@ async function createAdmin() {
     }
 
     // Criar senha hash
-    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const hashedPassword = await bcrypt.hash('DeuseBom040211', 10);
 
     // Criar usuário admin
     const admin = new User({
-      name: 'Admin',
-      email: 'admin@admin.com',
+      name: 'Beto',
+      email: 'beto.albertosantanabeto@gmail.com',
       password: hashedPassword,
       role: 'admin',
       createdAt: new Date()
@@ -55,11 +55,11 @@ async function createAdmin() {
 
     console.log('✅ Usuário admin criado com sucesso!');
     console.log('');
-    console.log('🔑 Credenciais:');
-    console.log('   Email: admin@admin.com');
-    console.log('   Senha: admin123');
-    console.log('');
-    console.log('⚠️  IMPORTANTE: Altere a senha após o primeiro login!');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('🔑 Credenciais de Acesso:');
+    console.log('   Email: beto.albertosantanabeto@gmail.com');
+    console.log('   Senha: DeuseBom040211');
+    console.log('═══════════════════════════════════════════════════════════');
 
     await mongoose.disconnect();
     process.exit(0);

@@ -22,6 +22,7 @@ import sftpRoutes from './routes/sftp';
 import wordpressRoutes from './routes/wordpress';
 import backupRoutes from './routes/backups';
 import logsRoutes from './routes/logs';
+import panelDeployRoutes from './routes/panel-deploy';
 import { UpdateCheckerService } from './services/UpdateCheckerService';
 
 const app = express();
@@ -108,6 +109,7 @@ app.use('/api/sftp', sftpRoutes);
 app.use('/api/wordpress', wordpressRoutes);
 app.use('/api/backups', backupRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/panel-deploy', panelDeployRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -123,6 +125,11 @@ io.on('connection', (socket) => {
     console.log(`Cliente ${socket.id} entrou na sala deploy-${projectId}`);
   });
 
+  socket.on('join-panel-deploy', () => {
+    socket.join('panel-deploy');
+    console.log(`Cliente ${socket.id} entrou na sala panel-deploy`);
+  });
+
   socket.on('join-database', (databaseId) => {
     socket.join(`database-${databaseId}`);
     console.log(`Cliente ${socket.id} entrou na sala database-${databaseId}`);
@@ -131,6 +138,11 @@ io.on('connection', (socket) => {
   socket.on('leave-deploy', (projectId) => {
     socket.leave(`deploy-${projectId}`);
     console.log(`Cliente ${socket.id} saiu da sala deploy-${projectId}`);
+  });
+
+  socket.on('leave-panel-deploy', () => {
+    socket.leave('panel-deploy');
+    console.log(`Cliente ${socket.id} saiu da sala panel-deploy`);
   });
 
   socket.on('subscribe-logs', (projectId) => {

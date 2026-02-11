@@ -4,6 +4,7 @@ WORKDIR /app
 
 # Variáveis de ambiente para build
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 
 # Copiar package files
 COPY package*.json ./
@@ -13,9 +14,6 @@ RUN npm ci
 
 # Copiar código fonte
 COPY . .
-
-# Definir NODE_ENV apenas para o build
-ENV NODE_ENV=production
 
 # Build para produção
 RUN npm run build

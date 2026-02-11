@@ -77,6 +77,12 @@ export default function AdminDashboard() {
             </div>
             <div className="flex gap-3">
               <Link
+                href="/admin/panel-deploy"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Deploy do Painel
+              </Link>
+              <Link
                 href="/admin/settings"
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
               >
