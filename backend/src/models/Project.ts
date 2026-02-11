@@ -99,7 +99,7 @@ const ProjectSchema = new Schema({
   serverHost: { type: String }, // IP/Host do servidor remoto
   groupId: { type: String }, // ID do grupo/pasta
   groupName: { type: String }, // Nome do grupo
-  userId: { type: String, required: true, index: true }, // ID do usuário dono
+  userId: { type: String, required: true }, // ID do usuário dono
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -109,7 +109,8 @@ ProjectSchema.pre('save', function(next) {
   next();
 });
 
-// Índice composto: nome único por usuário
-ProjectSchema.index({ name: 1, userId: 1 }, { unique: true });
+// Índice para performance (não único - permite nomes duplicados)
+ProjectSchema.index({ userId: 1 });
+ProjectSchema.index({ name: 1 });
 
 export default mongoose.model<IProject>('Project', ProjectSchema);

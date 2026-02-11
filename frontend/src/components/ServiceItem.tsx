@@ -371,6 +371,20 @@ export default function ServiceItem({ item, type, onDataUpdate }: ServiceItemPro
             </button>
           )}
 
+          {/* Logs */}
+          {type === 'project' && item.containerId && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(`/logs/${item._id}`, '_blank');
+              }}
+              className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+              title="Ver Logs"
+            >
+              <TerminalIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            </button>
+          )}
+
           {/* Settings */}
           <button
             onClick={(e) => {
@@ -730,6 +744,20 @@ export default function ServiceItem({ item, type, onDataUpdate }: ServiceItemPro
                   <HardDrive className="w-5 h-5" />
                   <span>Gerenciar Backups</span>
                 </button>
+
+                {/* Botão de Logs em Tempo Real */}
+                {type === 'project' && item.containerId && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(`/logs/${item._id}`, '_blank');
+                    }}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium border-2 border-gray-200 dark:border-gray-600"
+                  >
+                    <TerminalIcon className="w-5 h-5" />
+                    <span>Ver Logs em Tempo Real</span>
+                  </button>
+                )}
 
                 {/* Botão de deletar */}
                 <button

@@ -76,9 +76,9 @@ export class DeployService {
       
       const cloneResult = await ssh.execCommand(`
         if [ -d "${remoteProjectPath}" ]; then
-          cd ${remoteProjectPath} && git fetch && git checkout ${project.branch} && git pull
+          cd ${remoteProjectPath} && git fetch origin && git checkout -B ${project.branch} origin/${project.branch} && git pull origin ${project.branch}
         else
-          GIT_TERMINAL_PROMPT=0 git clone ${gitUrl} ${remoteProjectPath} && cd ${remoteProjectPath} && git checkout ${project.branch}
+          GIT_TERMINAL_PROMPT=0 git clone ${gitUrl} ${remoteProjectPath} && cd ${remoteProjectPath} && git checkout -B ${project.branch} origin/${project.branch}
         fi
       `);
       
@@ -124,9 +124,13 @@ export class DeployService {
         let dockerfileContent = '';
         
         if (projectType === 'nodejs') {
-          // Detectar se é Next.js, React, ou Node puro
-          const packageCheck = await ssh.execCommand(`cat ${remoteProjectPath}/package.json | grep -E '"next"|"react-scripts"|"express"' || echo "node"`);
+          // Detectar se é Next.js, React, TypeScript ou Node puro
+          const packageCheck = await ssh.execCommand(`cat ${remoteProjectPath}/package.json | grep -E '"next"|"react-scripts"|"express"|"typescript"|"ts-node"' || echo "node"`);
           const packageContent = packageCheck.stdout;
+          
+          // Verificar se é TypeScript
+          const hasTsConfig = await ssh.execCommand(`test -f ${remoteProjectPath}/tsconfig.json && echo "yes" || echo "no"`);
+          const isTypeScript = hasTsConfig.stdout.trim() === 'yes';
           
           if (packageContent.includes('"next"')) {
             // Next.js
@@ -155,8 +159,35 @@ COPY --from=build /app/build /usr/share/nginx/html
 RUN echo 'server { listen \${PORT:-80}; location / { root /usr/share/nginx/html; try_files \\$uri /index.html; } }' > /etc/nginx/conf.d/default.conf
 EXPOSE \${PORT:-80}
 CMD ["nginx", "-g", "daemon off;"]`;
+          } else if (isTypeScript) {
+            // TypeScript backend (Express, etc) - usar ts-node
+            dockerfileContent = `FROM node:20-alpine
+
+# Instalar dependências do sistema
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+
+# Instalar todas as dependências (incluindo devDependencies para ts-node)
+RUN npm ci
+
+# Copiar código fonte
+COPY . .
+
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=\${PORT:-3000}
+
+# Expor porta
+EXPOSE \${PORT}
+
+# Usar ts-node para executar TypeScript diretamente
+CMD ["npx", "ts-node", "--transpile-only", "src/index.ts"]`;
           } else {
-            // Node.js genérico
+            // Node.js genérico (JavaScript)
             dockerfileContent = `FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
@@ -207,12 +238,16 @@ DOCKERFILE_EOF`);
         throw new Error(`Erro no build: ${buildResult.stderr}`);
       }
       
-      // 5. Parar container antigo (se existir)
+      // 5. Parar e remover container antigo (se existir)
       if (project.containerId) {
-        this.emitLog(project._id.toString(), '⏸️ Parando container anterior...');
-        logs += '⏸️ Parando container anterior...\n';
+        this.emitLog(project._id.toString(), '⏸️ Parando e removendo container anterior...');
+        logs += '⏸️ Parando e removendo container anterior...\n';
         await ssh.execCommand(`docker stop ${project.containerId} || true`);
+        await ssh.execCommand(`docker rm ${project.containerId} || true`);
       }
+      
+      // Remover containers antigos do mesmo projeto (limpeza adicional)
+      await ssh.execCommand(`docker ps -a --filter "name=${project.name}-" --format "{{.ID}}" | xargs -r docker rm -f || true`);
       
       // 6. Iniciar novo container com Traefik
       this.emitLog(project._id.toString(), '🚀 Iniciando novo container...');
@@ -238,96 +273,17 @@ DOCKERFILE_EOF`);
         }
       }
       
-      // Configurar proxy reverso (Traefik ou Nginx)
-      let traefikLabels = '';
-      let useNginxFallback = false;
+      // Detectar/criar rede coolify
+      const networkName = 'coolify';
+      await ssh.execCommand(`docker network create ${networkName} 2>/dev/null || true`);
       
-      if (project.domain) {
-        this.emitLog(project._id.toString(), '🔧 Configurando proxy reverso...');
-        logs += '🔧 Configurando proxy reverso...\n';
-        
-        const { TraefikService } = await import('./TraefikService');
-        
-        // Verificar se Traefik está rodando
-        const traefikRunning = await TraefikService.isTraefikRunning(ssh);
-        
-        if (traefikRunning) {
-          // Opção 1: Usar Traefik
-          this.emitLog(project._id.toString(), '✅ Traefik detectado - usando Traefik');
-          logs += '✅ Traefik detectado - usando Traefik\n';
-          
-          // Detectar e garantir que rede existe
-          const networkName = await TraefikService.detectNetwork(ssh);
-          await TraefikService.ensureNetwork(networkName, ssh);
-          
-          // Gerar labels do Traefik
-          const labels = await TraefikService.generateLabels(
-            project.domain,
-            internalPort,
-            project.name,
-            false // SSL desabilitado por padrão
-          );
-          
-          // Converter labels para formato docker run
-          const labelArgs = TraefikService.labelsToDockerArgs(labels);
-          traefikLabels = labelArgs.join(' ');
-          
-          this.emitLog(project._id.toString(), `📡 Configurando domínio: ${project.domain} → porta ${internalPort}`);
-          logs += `📡 Configurando domínio: ${project.domain} → porta ${internalPort}\n`;
-        } else {
-          // Traefik não encontrado - instalar automaticamente
-          this.emitLog(project._id.toString(), '📦 Traefik não encontrado - instalando automaticamente...');
-          logs += '📦 Traefik não encontrado - instalando automaticamente...\n';
-          
-          try {
-            // Instalar Traefik (passando conexão SSH)
-            await TraefikService.setupTraefik(ssh);
-            
-            this.emitLog(project._id.toString(), '✅ Traefik instalado com sucesso!');
-            logs += '✅ Traefik instalado com sucesso!\n';
-            
-            // Detectar e garantir que rede existe
-            const networkName = await TraefikService.detectNetwork(ssh);
-            await TraefikService.ensureNetwork(networkName, ssh);
-            
-            // Gerar labels do Traefik
-            const labels = await TraefikService.generateLabels(
-              project.domain,
-              internalPort,
-              project.name,
-              false
-            );
-            
-            // Converter labels para formato docker run
-            const labelArgs = TraefikService.labelsToDockerArgs(labels);
-            traefikLabels = labelArgs.join(' ');
-            
-            this.emitLog(project._id.toString(), `📡 Configurando domínio: ${project.domain} → porta ${internalPort}`);
-            logs += `📡 Configurando domínio: ${project.domain} → porta ${internalPort}\n`;
-          } catch (error: any) {
-            // Se falhar, usar Nginx como fallback
-            this.emitLog(project._id.toString(), `⚠️  Erro ao instalar Traefik: ${error.message}`);
-            logs += `⚠️  Erro ao instalar Traefik: ${error.message}\n`;
-            this.emitLog(project._id.toString(), '🔄 Usando Nginx como fallback...');
-            logs += '🔄 Usando Nginx como fallback...\n';
-            useNginxFallback = true;
-          }
-        }
-      }
-      
-      // Detectar rede do Traefik
-      const { TraefikService } = await import('./TraefikService');
-      const networkName = await TraefikService.detectNetwork(ssh);
-      await TraefikService.ensureNetwork(networkName, ssh);
-      
-      // Criar container com labels do Traefik e PORT configurada
+      // Criar container com PORT configurada
       const runResult = await ssh.execCommand(`
         docker run -d \
           --name ${containerName} \
           --network ${networkName} \
           -e PORT=${project.port || 3000} \
           ${envVars} \
-          ${traefikLabels} \
           --restart unless-stopped \
           ${project.name}:${commit.substring(0, 8)}
       `);
@@ -352,86 +308,32 @@ DOCKERFILE_EOF`);
       this.emitLog(project._id.toString(), '✅ Container rodando');
       logs += '✅ Container rodando\n';
       
-      // 7. Configurar proxy (Traefik ou Nginx)
+      // 7. Configurar proxy reverso com Nginx
       if (project.domain) {
         try {
-          if (traefikLabels) {
-            // Usar Traefik - verificar conectividade
-            this.emitLog(project._id.toString(), '🔍 Verificando conectividade com Traefik...');
-            logs += '🔍 Verificando conectividade com Traefik...\n';
-            
-            // Verificar se container está na rede do Traefik
-            const networkCheckResult = await ssh.execCommand(`docker inspect ${newContainerId} --format '{{range $key, $value := .NetworkSettings.Networks}}{{$key}}{{println}}{{end}}'`);
-            const containerNetworks = networkCheckResult.stdout.trim().split('\n');
-            
-            this.emitLog(project._id.toString(), `📡 Container nas redes: ${containerNetworks.join(', ')}`);
-            logs += `📡 Container nas redes: ${containerNetworks.join(', ')}\n`;
-            
-            // Verificar se Traefik está na mesma rede
-            const traefikNetworkResult = await ssh.execCommand(`docker inspect traefik-proxy --format '{{range $key, $value := .NetworkSettings.Networks}}{{$key}}{{end}}'`);
-            const traefikNetwork = traefikNetworkResult.stdout.trim();
-            
-            this.emitLog(project._id.toString(), `🔍 Rede do Traefik: ${traefikNetwork}`);
-            logs += `🔍 Rede do Traefik: ${traefikNetwork}\n`;
-            
-            if (!traefikNetwork) {
-              // Fallback: tentar detectar rede manualmente
-              this.emitLog(project._id.toString(), '⚠️  Não foi possível detectar rede do Traefik automaticamente');
-              logs += '⚠️  Não foi possível detectar rede do Traefik automaticamente\n';
-              
-              // Verificar se existe rede coolify
-              const coolifyCheck = await ssh.execCommand(`docker network ls --filter "name=coolify" --format "{{.Name}}"`);
-              if (coolifyCheck.stdout.includes('coolify')) {
-                const traefikNetworkFallback = 'coolify';
-                this.emitLog(project._id.toString(), `🔧 Usando rede: ${traefikNetworkFallback}`);
-                logs += `🔧 Usando rede: ${traefikNetworkFallback}\n`;
-                
-                if (!containerNetworks.includes(traefikNetworkFallback)) {
-                  await ssh.execCommand(`docker network connect ${traefikNetworkFallback} ${newContainerId}`);
-                  this.emitLog(project._id.toString(), '✅ Container conectado à rede coolify');
-                  logs += '✅ Container conectado à rede coolify\n';
-                }
-              }
-            } else if (!containerNetworks.includes(traefikNetwork)) {
-              this.emitLog(project._id.toString(), `⚠️  Container não está na rede do Traefik (${traefikNetwork})`);
-              logs += `⚠️  Container não está na rede do Traefik (${traefikNetwork})\n`;
-              
-              this.emitLog(project._id.toString(), `🔧 Conectando à rede: ${traefikNetwork}...`);
-              logs += `🔧 Conectando à rede: ${traefikNetwork}...\n`;
-              
-              await ssh.execCommand(`docker network connect ${traefikNetwork} ${newContainerId}`);
-              
-              this.emitLog(project._id.toString(), '✅ Container conectado à rede do Traefik');
-              logs += '✅ Container conectado à rede do Traefik\n';
-            }
-            
-            this.emitLog(project._id.toString(), `✅ Traefik configurado! Acesse: http://${project.domain}`);
-            logs += `✅ Traefik configurado! Acesse: http://${project.domain}\n`;
-            
-            // Aguardar 3 segundos para Traefik detectar
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-            this.emitLog(project._id.toString(), '⏳ Aguarde alguns segundos para o Traefik detectar o serviço');
-            logs += '⏳ Aguarde alguns segundos para o Traefik detectar o serviço\n';
-          } else if (useNginxFallback) {
-            // Usar Nginx como fallback
-            this.emitLog(project._id.toString(), '📦 Instalando Nginx (fallback)...');
-            logs += '📦 Instalando Nginx (fallback)...\n';
-            
-            const { NginxService } = await import('./NginxService');
-            
-            // Garantir que Nginx está instalado
-            await NginxService.ensureNginxProxy(ssh);
-            
-            // Configurar projeto no Nginx
-            await NginxService.configureProject(ssh, project.name, project.domain, project.port || 3000);
-            
-            this.emitLog(project._id.toString(), `✅ Nginx configurado! Acesse: http://${project.domain}`);
-            logs += `✅ Nginx configurado! Acesse: http://${project.domain}\n`;
-          }
+          this.emitLog(project._id.toString(), '🔧 Configurando proxy reverso (Nginx)...');
+          logs += '🔧 Configurando proxy reverso (Nginx)...\n';
+          
+          const { NginxService } = await import('./NginxService');
+          
+          // Usar o nome do container que já criamos
+          this.emitLog(project._id.toString(), `📝 Configurando para container: ${containerName}`);
+          logs += `📝 Configurando para container: ${containerName}\n`;
+          
+          // Configurar Nginx
+          await NginxService.configureProxy(
+            ssh,
+            project.name,
+            project.domain,
+            containerName,
+            internalPort
+          );
+          
+          this.emitLog(project._id.toString(), `✅ Proxy configurado! Acesse: http://${project.domain}`);
+          logs += `✅ Proxy configurado! Acesse: http://${project.domain}\n`;
         } catch (proxyError: any) {
-          this.emitLog(project._id.toString(), `⚠️  Aviso: ${proxyError.message}`);
-          logs += `⚠️  Aviso: ${proxyError.message}\n`;
+          this.emitLog(project._id.toString(), `⚠️  Erro ao configurar proxy: ${proxyError.message}`);
+          logs += `⚠️  Erro ao configurar proxy: ${proxyError.message}\n`;
           // Não falha o deploy se proxy der erro
         }
       }

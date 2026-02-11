@@ -21,6 +21,7 @@ import adminRoutes from './routes/admin';
 import sftpRoutes from './routes/sftp';
 import wordpressRoutes from './routes/wordpress';
 import backupRoutes from './routes/backups';
+import logsRoutes from './routes/logs';
 import { UpdateCheckerService } from './services/UpdateCheckerService';
 
 const app = express();
@@ -103,6 +104,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/sftp', sftpRoutes);
 app.use('/api/wordpress', wordpressRoutes);
 app.use('/api/backups', backupRoutes);
+app.use('/api/logs', logsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -2,209 +2,143 @@ import { NodeSSH } from 'node-ssh';
 
 export class NginxService {
   /**
-   * Garante que o Nginx proxy está instalado e rodando no servidor
+   * Garante que o Nginx está instalado no servidor
    */
-  static async ensureNginxProxy(ssh: NodeSSH): Promise<void> {
-    console.log('🔍 Verificando se Nginx proxy está instalado...');
+  static async ensureNginxInstalled(ssh: NodeSSH): Promise<void> {
+    console.log('📦 Verificando Nginx...');
     
-    // Verificar se container existe (rodando ou parado)
-    const checkExistsResult = await ssh.execCommand('docker ps -a --filter name=nginx-proxy --format "{{.Names}}"');
+    const checkResult = await ssh.execCommand('which nginx');
     
-    if (checkExistsResult.stdout.includes('nginx-proxy')) {
-      console.log('📦 Container nginx-proxy já existe');
-      
-      // Verificar se está rodando
-      const checkRunningResult = await ssh.execCommand('docker ps --filter name=nginx-proxy --format "{{.Names}}"');
-      
-      if (checkRunningResult.stdout.includes('nginx-proxy')) {
-        console.log('✅ Nginx proxy já está rodando');
-        return;
-      }
-      
-      // Container existe mas está parado - iniciar
-      console.log('▶️  Iniciando container nginx-proxy existente...');
-      const startResult = await ssh.execCommand('docker start nginx-proxy');
-      
-      if (startResult.code === 0) {
-        console.log('✅ Nginx proxy iniciado com sucesso');
-        return;
-      }
-      
-      // Se falhou ao iniciar, remover e recriar
-      console.log('⚠️  Falha ao iniciar, removendo container antigo...');
-      await ssh.execCommand('docker rm -f nginx-proxy');
+    if (checkResult.code !== 0) {
+      console.log('📦 Instalando Nginx...');
+      await ssh.execCommand('apt-get update && apt-get install -y nginx');
+      console.log('✅ Nginx instalado');
+    } else {
+      console.log('✅ Nginx já instalado');
     }
-
-    console.log('📦 Instalando Nginx proxy...');
-
-    // Criar diretórios
-    console.log('📁 Criando diretórios...');
-    await ssh.execCommand('mkdir -p /opt/nginx/conf.d');
-    await ssh.execCommand('mkdir -p /opt/nginx/logs');
-
-    // Criar nginx.conf
-    console.log('📝 Criando nginx.conf...');
-    const nginxConf = `
-events {
-    worker_connections 1024;
-}
-
-http {
-    client_max_body_size 100M;
-    proxy_connect_timeout 600;
-    proxy_send_timeout 600;
-    proxy_read_timeout 600;
-    send_timeout 600;
-
-    access_log /var/log/nginx/access.log;
-    error_log /var/log/nginx/error.log;
-
-    server {
-        listen 80 default_server;
-        server_name _;
-        
-        location / {
-            return 404 "Domínio não configurado no proxy";
-        }
-    }
-
-    include /etc/nginx/conf.d/*.conf;
-}
-`;
-
-    const createConfResult = await ssh.execCommand(`cat > /opt/nginx/nginx.conf << 'EOF'
-${nginxConf}
-EOF`);
-    
-    if (createConfResult.code !== 0) {
-      console.error('❌ Erro ao criar nginx.conf:', createConfResult.stderr);
-      throw new Error(`Erro ao criar nginx.conf: ${createConfResult.stderr}`);
-    }
-
-    // Iniciar container Nginx
-    console.log('🚀 Iniciando container Nginx...');
-    const runResult = await ssh.execCommand(`
-      docker run -d \
-        --name nginx-proxy \
-        --restart unless-stopped \
-        -p 80:80 \
-        -v /opt/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
-        -v /opt/nginx/conf.d:/etc/nginx/conf.d:ro \
-        -v /opt/nginx/logs:/var/log/nginx \
-        nginx:alpine
-    `);
-
-    if (runResult.code !== 0) {
-      console.error('❌ Erro ao iniciar Nginx:', runResult.stderr);
-      throw new Error(`Erro ao iniciar Nginx: ${runResult.stderr}`);
-    }
-
-    console.log('✅ Nginx proxy instalado com sucesso!');
-    console.log('Container ID:', runResult.stdout.trim());
   }
 
   /**
-   * Cria configuração do Nginx para um projeto
+   * Configura proxy reverso para um projeto
    */
-  static async configureProject(
+  static async configureProxy(
     ssh: NodeSSH,
     projectName: string,
     domain: string,
+    containerName: string,
     port: number
   ): Promise<void> {
-    console.log(`📝 Criando configuração Nginx para ${projectName}...`);
-    console.log(`   Domínio: ${domain}`);
-    console.log(`   Porta: ${port}`);
+    console.log(`📝 Configurando proxy Nginx para ${domain}...`);
     
-    const nginxConfig = `
-server {
+    // Garantir que Nginx está instalado
+    await this.ensureNginxInstalled(ssh);
+    
+    // Verificar se container está rodando
+    const containerCheck = await ssh.execCommand(`docker ps --filter "name=${containerName}" --format "{{.Names}}"`);
+    if (!containerCheck.stdout.trim()) {
+      throw new Error(`Container ${containerName} não está rodando`);
+    }
+    
+    console.log(`🔍 Container encontrado: ${containerName}`);
+    
+    // Obter IP do container na rede coolify
+    const ipResult = await ssh.execCommand(
+      `docker inspect ${containerName} --format '{{range $key, $value := .NetworkSettings.Networks}}{{if eq $key "coolify"}}{{$value.IPAddress}}{{end}}{{end}}'`
+    );
+    
+    let containerIp = ipResult.stdout.trim();
+    
+    // Se não tiver IP na rede coolify, tentar outras redes
+    if (!containerIp) {
+      console.log('⚠️  Container não está na rede coolify, buscando em outras redes...');
+      const allIpsResult = await ssh.execCommand(
+        `docker inspect ${containerName} --format '{{range $key, $value := .NetworkSettings.Networks}}{{$value.IPAddress}}{{println}}{{end}}' | head -n 1`
+      );
+      containerIp = allIpsResult.stdout.trim();
+    }
+    
+    if (!containerIp) {
+      throw new Error('Container não tem IP. Verifique se está rodando.');
+    }
+    
+    console.log(`📡 IP do container ${containerName}: ${containerIp}`);
+    
+    // Remover TODAS as configurações antigas deste projeto (por nome e domínio)
+    console.log(`🗑️  Removendo configurações antigas para ${projectName}...`);
+    await ssh.execCommand(`rm -f /etc/nginx/sites-enabled/${projectName}*`);
+    await ssh.execCommand(`rm -f /etc/nginx/sites-available/${projectName}*`);
+    
+    // Remover também por domínio (caso tenha sido criado com nome diferente)
+    const domainSafe = domain.replace(/[^a-zA-Z0-9.-]/g, '_');
+    await ssh.execCommand(`rm -f /etc/nginx/sites-enabled/${domainSafe}*`);
+    await ssh.execCommand(`rm -f /etc/nginx/sites-available/${domainSafe}*`);
+    
+    // Criar nova configuração do Nginx
+    const nginxConfig = `server {
     listen 80;
     server_name ${domain};
 
-    # Logs específicos do projeto
-    access_log /var/log/nginx/${projectName}-access.log;
-    error_log /var/log/nginx/${projectName}-error.log;
-
     location / {
-        # Proxy para o container
-        proxy_pass http://172.17.0.1:${port};
-        
-        # Headers necessários
+        proxy_pass http://${containerIp}:${port};
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Upgrade \\$http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        
-        # Timeouts
-        proxy_connect_timeout 600;
-        proxy_send_timeout 600;
-        proxy_read_timeout 600;
+        proxy_set_header Host \\$host;
+        proxy_cache_bypass \\$http_upgrade;
+        proxy_set_header X-Real-IP \\$remote_addr;
+        proxy_set_header X-Forwarded-For \\$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \\$scheme;
     }
-}
-`;
-
-    // Criar arquivo de configuração
-    const createResult = await ssh.execCommand(`cat > /opt/nginx/conf.d/${projectName}.conf << 'EOF'
+}`;
+    
+    // Salvar configuração
+    await ssh.execCommand(`cat > /etc/nginx/sites-available/${projectName} << 'EOF'
 ${nginxConfig}
 EOF`);
     
-    if (createResult.code !== 0) {
-      console.error('❌ Erro ao criar config:', createResult.stderr);
-      throw new Error(`Erro ao criar configuração: ${createResult.stderr}`);
-    }
+    // Ativar site
+    await ssh.execCommand(`ln -sf /etc/nginx/sites-available/${projectName} /etc/nginx/sites-enabled/${projectName}`);
     
-    console.log(`✅ Arquivo criado: /opt/nginx/conf.d/${projectName}.conf`);
-
-    // Verificar se arquivo foi criado
-    const verifyResult = await ssh.execCommand(`ls -la /opt/nginx/conf.d/${projectName}.conf`);
-    console.log('📄 Verificação:', verifyResult.stdout);
-
-    // Testar configuração do Nginx
-    console.log('🧪 Testando configuração do Nginx...');
-    const testResult = await ssh.execCommand('docker exec nginx-proxy nginx -t');
+    // Testar configuração
+    const testResult = await ssh.execCommand('nginx -t');
     
     if (testResult.code !== 0) {
-      console.error('❌ Erro na configuração do Nginx:', testResult.stderr);
-      throw new Error(`Configuração inválida: ${testResult.stderr}`);
+      throw new Error(`Erro na configuração do Nginx: ${testResult.stderr}`);
     }
     
-    console.log('✅ Configuração válida');
-
     // Recarregar Nginx
-    console.log('🔄 Recarregando Nginx...');
-    const reloadResult = await ssh.execCommand('docker exec nginx-proxy nginx -s reload');
+    await ssh.execCommand('systemctl reload nginx || systemctl restart nginx');
     
-    if (reloadResult.code !== 0) {
-      console.error('⚠️  Erro ao recarregar Nginx:', reloadResult.stderr);
-      throw new Error(`Erro ao recarregar: ${reloadResult.stderr}`);
-    }
-    
-    console.log('✅ Nginx recarregado com sucesso');
-    console.log(`🌐 Acesse: http://${domain}`);
+    console.log(`✅ Proxy Nginx configurado: ${domain} → ${containerIp}:${port}`);
   }
 
   /**
-   * Remove configuração do Nginx para um projeto
+   * Remove configuração de proxy de um projeto
    */
-  static async removeProject(ssh: NodeSSH, projectName: string): Promise<void> {
-    // Remover arquivo de configuração
-    await ssh.execCommand(`rm -f /opt/nginx/conf.d/${projectName}.conf`);
-
-    // Recarregar Nginx
-    await ssh.execCommand('docker exec nginx-proxy nginx -s reload || true');
+  static async removeProxy(ssh: NodeSSH, projectName: string): Promise<void> {
+    console.log(`🗑️  Removendo configuração Nginx para ${projectName}...`);
     
-    console.log(`✅ Configuração Nginx removida para ${projectName}`);
+    await ssh.execCommand(`rm -f /etc/nginx/sites-enabled/${projectName}`);
+    await ssh.execCommand(`rm -f /etc/nginx/sites-available/${projectName}`);
+    await ssh.execCommand('systemctl reload nginx || true');
+    
+    console.log('✅ Configuração removida');
   }
 
   /**
-   * Testa se o Nginx está funcionando
+   * Atualiza configuração de proxy (quando IP do container muda)
    */
-  static async testNginx(ssh: NodeSSH): Promise<boolean> {
-    const result = await ssh.execCommand('docker exec nginx-proxy nginx -t');
-    return result.code === 0;
+  static async updateProxy(
+    ssh: NodeSSH,
+    projectName: string,
+    domain: string,
+    containerName: string,
+    port: number
+  ): Promise<void> {
+    // Remove configuração antiga
+    await this.removeProxy(ssh, projectName);
+    
+    // Cria nova configuração
+    await this.configureProxy(ssh, projectName, domain, containerName, port);
   }
 }

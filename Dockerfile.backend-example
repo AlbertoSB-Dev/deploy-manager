@@ -1,0 +1,23 @@
+# Dockerfile para o Backend do Ark Deploy
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copiar package files
+COPY backend/package*.json ./
+
+# Instalar dependências
+RUN npm ci --only=production
+
+# Copiar código fonte
+COPY backend/ ./
+
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=8000
+
+# Expor porta
+EXPOSE 8000
+
+# Comando para iniciar (usando ts-node para não precisar compilar)
+CMD ["npx", "ts-node", "--transpile-only", "src/index.ts"]
