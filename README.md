@@ -17,6 +17,24 @@ curl -fsSL https://raw.githubusercontent.com/AlbertoSB-Dev/deploy-manager/main/i
 
 **Acesse:** `http://painel.SEU_IP.sslip.io`
 
+## 🚀 Modo Produção
+
+O sistema é instalado automaticamente em modo produção. Para verificar:
+
+```bash
+cd /opt/ark-deploy
+docker-compose logs frontend | grep -i "ready"
+```
+
+Se aparecer "npm run dev", force o modo produção:
+
+```bash
+cd /opt/ark-deploy
+./switch-to-production.sh
+```
+
+📖 **Documentação completa:** [PRODUCTION.md](PRODUCTION.md)
+
 ---
 
 ## ✨ Funcionalidades

@@ -1,334 +1,216 @@
-# 🚀 Ark Deploy - Guia de Produção
+# 🚀 Modo Produção - Ark Deploy
 
-Este guia explica como fazer deploy do Ark Deploy em produção com configurações otimizadas e seguras.
+Este guia explica como garantir que o Ark Deploy está rodando em modo produção.
 
-## 📋 Pré-requisitos
+## ✅ Como Verificar se Está em Produção
 
-- Docker 20.10+
-- Docker Compose 2.0+
-- Servidor Linux (Ubuntu/Debian recomendado)
-- Mínimo 2GB RAM
-- Acesso root ou sudo
-
-## 🔧 Instalação
-
-### 1. Clone o Repositório
+Execute no servidor:
 
 ```bash
-git clone https://github.com/AlbertoSB-Dev/deploy-manager.git
-cd deploy-manager
+cd /opt/ark-deploy
+
+# Verificar logs do frontend
+docker-compose logs frontend | grep -i "mode\|dev\|production\|ready"
+
+# Verificar logs do backend
+docker-compose logs backend | grep -i "mode\|dev\|production"
 ```
 
-### 2. Configure Variáveis de Ambiente
+### Sinais de Modo Produção ✅
+
+**Frontend (Next.js):**
+- ✅ `✓ Ready in Xs` (sem mencionar "dev" ou "Turbopack")
+- ✅ Sem mensagem "Try Turbopack"
+- ✅ Sem "Route: Static" ou "Route: Dynamic"
+- ✅ `NODE_ENV=production` nos logs
+
+**Backend:**
+- ✅ `node dist/index.js` rodando
+- ✅ Sem `ts-node` ou `ts-node-dev` nos processos
+- ✅ `NODE_ENV=production` nos logs
+
+### Sinais de Modo Desenvolvimento ❌
+
+**Frontend:**
+- ❌ `npm run dev` nos logs
+- ❌ Mensagem "Try Turbopack"
+- ❌ "Route: Static" ou "Route: Dynamic"
+- ❌ Warnings sobre "allowedDevOrigins"
+
+**Backend:**
+- ❌ `ts-node` ou `ts-node-dev` rodando
+- ❌ `npm run dev` nos logs
+
+## 🔄 Como Mudar para Modo Produção
+
+### Opção 1: Script Automático (Recomendado)
 
 ```bash
-# Copiar arquivo de exemplo
-cp .env.production .env.production
-
-# Gerar secrets seguros
-echo "JWT_SECRET=$(openssl rand -hex 64)" >> .env.production
-echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env.production
-echo "MONGO_PASSWORD=$(openssl rand -base64 32)" >> .env.production
-
-# Editar e configurar SERVER_IP
-nano .env.production
+cd /opt/ark-deploy
+chmod +x switch-to-production.sh
+./switch-to-production.sh
 ```
 
-**Variáveis obrigatórias:**
-- `SERVER_IP` - IP do seu servidor
-- `MONGO_PASSWORD` - Senha do MongoDB (gerada automaticamente)
-- `JWT_SECRET` - Secret para JWT (gerado automaticamente)
-- `ENCRYPTION_KEY` - Chave de criptografia (gerada automaticamente)
+Este script:
+1. Para todos os containers
+2. Remove imagens antigas
+3. Limpa todo o cache (Docker, Next.js, TypeScript)
+4. Reconstrói tudo do zero em modo produção
+5. Inicia os containers
 
-### 3. Execute o Deploy
+### Opção 2: Manual
 
 ```bash
-chmod +x deploy-production.sh
-./deploy-production.sh
-```
+cd /opt/ark-deploy
 
-O script irá:
-- ✅ Validar variáveis de ambiente
-- ✅ Criar rede do Traefik
-- ✅ Build das imagens otimizadas
-- ✅ Iniciar containers
-- ✅ Criar usuário admin
+# 1. Parar containers
+docker-compose down
 
-## 🌐 Acesso
+# 2. Remover imagens antigas
+docker rmi ark-deploy-frontend ark-deploy-backend
 
-Após o deploy:
+# 3. Limpar cache do Docker
+docker builder prune -af
 
-- **Frontend:** `http://SEU_IP:8000`
-- **Backend API:** `http://SEU_IP:8001`
-- **Com Traefik:** `http://ark-deploy.SEU_IP.sslip.io`
+# 4. Limpar cache do Next.js e build do backend
+rm -rf frontend/.next
+rm -rf frontend/node_modules/.cache
+rm -rf backend/dist
 
-**Credenciais padrão:**
-- Email: `admin@admin.com`
-- Senha: `admin123`
+# 5. Rebuild sem cache
+docker-compose build --no-cache --pull
 
-⚠️ **IMPORTANTE:** Altere a senha após o primeiro login!
+# 6. Iniciar
+docker-compose up -d
 
-## 📊 Gerenciamento
-
-### Ver Logs
-
-```bash
-# Todos os serviços
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Apenas backend
-docker-compose -f docker-compose.prod.yml logs -f backend
-
-# Apenas frontend
-docker-compose -f docker-compose.prod.yml logs -f frontend
-```
-
-### Status dos Containers
-
-```bash
-docker-compose -f docker-compose.prod.yml ps
-```
-
-### Reiniciar Serviços
-
-```bash
-# Reiniciar tudo
-docker-compose -f docker-compose.prod.yml restart
-
-# Reiniciar apenas backend
-docker-compose -f docker-compose.prod.yml restart backend
-
-# Reiniciar apenas frontend
-docker-compose -f docker-compose.prod.yml restart frontend
-```
-
-### Parar Serviços
-
-```bash
-docker-compose -f docker-compose.prod.yml down
-```
-
-### Atualizar Sistema
-
-```bash
-# Baixar última versão
-git pull origin main
-
-# Rebuild e restart
-docker-compose -f docker-compose.prod.yml down
-docker-compose -f docker-compose.prod.yml build --no-cache
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-## 🔒 Segurança
-
-### Firewall
-
-Configure o firewall para permitir apenas portas necessárias:
-
-```bash
-# UFW (Ubuntu/Debian)
-sudo ufw allow 22/tcp    # SSH
-sudo ufw allow 80/tcp    # HTTP
-sudo ufw allow 443/tcp   # HTTPS
-sudo ufw allow 8000/tcp  # Frontend
-sudo ufw allow 8001/tcp  # Backend API
-sudo ufw enable
-```
-
-### SSL/HTTPS (Recomendado)
-
-Para produção, configure SSL com Let's Encrypt:
-
-```bash
-# Instalar Certbot
-sudo apt install certbot
-
-# Obter certificado
-sudo certbot certonly --standalone -d seu-dominio.com
-
-# Configurar Traefik para usar certificados
-# Ver documentação do Traefik
-```
-
-### Backup
-
-Configure backups automáticos:
-
-```bash
-# Backup do MongoDB
-docker-compose -f docker-compose.prod.yml exec mongodb mongodump \
-  --uri="mongodb://admin:SENHA@localhost:27017/ark-deploy?authSource=admin" \
-  --out=/backup
-
-# Backup de volumes
-docker run --rm -v mongodb_data:/data -v $(pwd)/backups:/backup \
-  alpine tar czf /backup/mongodb-$(date +%Y%m%d).tar.gz /data
-```
-
-## 🏗️ Arquitetura de Produção
-
-```
-┌─────────────────────────────────────────┐
-│           Traefik (Proxy)               │
-│         Port 80/443 (HTTP/HTTPS)        │
-└────────────┬────────────────────────────┘
-             │
-             ├──────────────┬──────────────┐
-             │              │              │
-    ┌────────▼────────┐ ┌──▼──────────┐ ┌─▼──────────┐
-    │   Frontend      │ │   Backend   │ │  MongoDB   │
-    │   (Next.js)     │ │  (Node.js)  │ │            │
-    │   Port 8000     │ │  Port 8001  │ │ Port 27017 │
-    └─────────────────┘ └─────────────┘ └────────────┘
-```
-
-## 📦 Branches Separadas
-
-O projeto está organizado em branches:
-
-- **`main`** - Projeto completo (frontend + backend)
-- **`frontend`** - Apenas frontend
-- **`backend`** - Apenas backend
-
-### Deploy de Branch Específica
-
-```bash
-# Frontend apenas
-git clone -b frontend https://github.com/AlbertoSB-Dev/deploy-manager.git frontend
-cd frontend
-docker build -f Dockerfile.prod -t ark-deploy-frontend .
-docker run -d -p 8000:8000 ark-deploy-frontend
-
-# Backend apenas
-git clone -b backend https://github.com/AlbertoSB-Dev/deploy-manager.git backend
-cd backend
-docker build -f Dockerfile.prod -t ark-deploy-backend .
-docker run -d -p 8001:8001 ark-deploy-backend
-```
-
-## 🔧 Configurações Avançadas
-
-### Limites de Recursos
-
-Edite `docker-compose.prod.yml` para adicionar limites:
-
-```yaml
-services:
-  backend:
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-```
-
-### Variáveis de Ambiente Customizadas
-
-Adicione no `.env.production`:
-
-```env
-# Limites de upload
-MAX_FILE_SIZE=100MB
-
-# Timeout de requisições
-REQUEST_TIMEOUT=30000
-
-# Número de workers
-WORKERS=2
+# 7. Ver logs
+docker-compose logs -f
 ```
 
 ## 🐛 Troubleshooting
 
-### Container não inicia
+### Frontend ainda mostra "npm run dev"
 
+**Causa:** Cache do Next.js ou Docker usando imagem antiga
+
+**Solução:**
 ```bash
-# Ver logs detalhados
-docker-compose -f docker-compose.prod.yml logs backend
-
-# Verificar health check
-docker inspect ark-deploy-backend-prod | grep -A 10 Health
+cd /opt/ark-deploy
+docker-compose down
+docker rmi ark-deploy-frontend
+rm -rf frontend/.next
+docker-compose build --no-cache frontend
+docker-compose up -d
 ```
 
-### MongoDB não conecta
+### Backend ainda usa ts-node
 
+**Causa:** Dockerfile não foi atualizado ou cache do Docker
+
+**Solução:**
 ```bash
-# Testar conexão
-docker-compose -f docker-compose.prod.yml exec backend \
-  wget -O- http://mongodb:27017
-
-# Verificar senha
-docker-compose -f docker-compose.prod.yml exec mongodb \
-  mongosh -u admin -p SENHA --authenticationDatabase admin
+cd /opt/ark-deploy
+docker-compose down
+docker rmi ark-deploy-backend
+rm -rf backend/dist
+docker-compose build --no-cache backend
+docker-compose up -d
 ```
 
-### Frontend não conecta no backend
+### Containers não iniciam após rebuild
 
-Verifique `NEXT_PUBLIC_API_URL` no `.env.production`:
+**Causa:** Erro no build ou falta de dependências
 
-```env
-# Para acesso externo
-NEXT_PUBLIC_API_URL=http://SEU_IP:8001
+**Solução:**
+```bash
+# Ver logs de build
+docker-compose build --no-cache
 
-# Para acesso interno (containers)
-NEXT_PUBLIC_API_URL=http://backend:8001
+# Ver logs de runtime
+docker-compose up
+
+# Se houver erro, verificar:
+docker-compose logs frontend
+docker-compose logs backend
 ```
 
-## 📈 Monitoramento
+## 📊 Diferenças entre Dev e Produção
 
-### Recursos do Sistema
+| Aspecto | Desenvolvimento | Produção |
+|---------|----------------|----------|
+| **Frontend** | `npm run dev` | `npm start` |
+| **Backend** | `ts-node-dev` | `node dist/index.js` |
+| **Hot Reload** | ✅ Sim | ❌ Não |
+| **Source Maps** | ✅ Completos | ⚠️ Limitados |
+| **Otimização** | ❌ Mínima | ✅ Máxima |
+| **Cache** | ❌ Desabilitado | ✅ Habilitado |
+| **Build Time** | Rápido | Mais lento |
+| **Performance** | Mais lento | Mais rápido |
+| **Tamanho** | Maior | Menor |
+
+## 🔒 Checklist de Produção
+
+Antes de colocar em produção, verifique:
+
+- [ ] `NODE_ENV=production` no `.env`
+- [ ] JWT_SECRET gerado com `openssl rand -hex 64`
+- [ ] ENCRYPTION_KEY gerado com `openssl rand -hex 16`
+- [ ] Senha do MongoDB alterada (não usar `changeme123`)
+- [ ] GitHub OAuth configurado (se usar)
+- [ ] Nginx configurado como proxy reverso
+- [ ] Firewall configurado (portas 80, 443, 8000, 8001)
+- [ ] Backups automáticos configurados
+- [ ] Logs sendo monitorados
+- [ ] SSL/TLS configurado (Certbot/Let's Encrypt)
+
+## 🚀 Performance em Produção
+
+### Frontend (Next.js)
+
+- Build otimizado com minificação
+- Imagens otimizadas automaticamente
+- CSS extraído e minificado
+- JavaScript dividido em chunks
+- Cache agressivo de assets estáticos
+
+### Backend (Node.js)
+
+- TypeScript compilado para JavaScript
+- Sem overhead de transpilação em runtime
+- Apenas dependências de produção instaladas
+- Logs otimizados
+
+## 📝 Comandos Úteis
 
 ```bash
-# CPU e Memória
+# Ver status dos containers
+docker-compose ps
+
+# Ver uso de recursos
 docker stats
 
-# Espaço em disco
-df -h
-docker system df
+# Ver logs em tempo real
+docker-compose logs -f
+
+# Ver apenas erros
+docker-compose logs | grep -i error
+
+# Reiniciar apenas um serviço
+docker-compose restart frontend
+docker-compose restart backend
+
+# Atualizar código e rebuild
+cd /opt/ark-deploy
+git pull
+./switch-to-production.sh
 ```
 
-### Logs Centralizados
+## 🆘 Suporte
 
-Configure um sistema de logs como ELK Stack ou Grafana Loki para monitoramento centralizado.
+Se após seguir este guia o sistema ainda estiver em modo dev:
 
-## 🔄 CI/CD
-
-Exemplo de GitHub Actions para deploy automático:
-
-```yaml
-name: Deploy Production
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      
-      - name: Deploy to server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: root
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd /opt/ark-deploy
-            git pull origin main
-            ./deploy-production.sh
-```
-
-## 📞 Suporte
-
-- **Issues:** https://github.com/AlbertoSB-Dev/deploy-manager/issues
-- **Documentação:** https://github.com/AlbertoSB-Dev/deploy-manager
-- **Discord:** [Em breve]
-
-## 📝 Licença
-
-MIT License - veja [LICENSE](./LICENSE) para detalhes.
+1. Verifique os Dockerfiles em `backend/Dockerfile` e `frontend/Dockerfile`
+2. Confirme que `CMD` usa comandos de produção
+3. Verifique se `NODE_ENV=production` está definido
+4. Execute `./switch-to-production.sh` novamente
+5. Abra uma issue no GitHub com os logs completos

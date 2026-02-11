@@ -1,0 +1,104 @@
+═══════════════════════════════════════════════════════════
+🚀 ARK DEPLOY - COMANDOS RÁPIDOS PARA PRODUÇÃO
+═══════════════════════════════════════════════════════════
+
+📍 CONECTAR NO SERVIDOR
+───────────────────────────────────────────────────────────
+ssh root@38.242.213.195
+cd /opt/ark-deploy
+
+🔄 MUDAR PARA MODO PRODUÇÃO (RECOMENDADO)
+───────────────────────────────────────────────────────────
+git pull
+chmod +x switch-to-production.sh
+./switch-to-production.sh
+
+⚡ MUDAR PARA PRODUÇÃO (MANUAL)
+───────────────────────────────────────────────────────────
+docker-compose down
+docker rmi ark-deploy-frontend ark-deploy-backend
+docker builder prune -af
+rm -rf frontend/.next backend/dist
+docker-compose build --no-cache --pull
+docker-compose up -d
+
+✅ VERIFICAR SE ESTÁ EM PRODUÇÃO
+───────────────────────────────────────────────────────────
+docker-compose logs frontend | grep -i "ready"
+docker-compose logs backend | grep -i "production"
+
+# Deve mostrar:
+# Frontend: "✓ Ready in Xs" (sem "dev" ou "Turbopack")
+# Backend: "🚀 Deploy Manager rodando na porta 8001"
+
+📊 VER LOGS
+───────────────────────────────────────────────────────────
+docker-compose logs -f                    # Todos
+docker-compose logs -f frontend           # Apenas frontend
+docker-compose logs -f backend            # Apenas backend
+docker-compose logs --tail=100 frontend   # Últimas 100 linhas
+
+🔧 GERENCIAR CONTAINERS
+───────────────────────────────────────────────────────────
+docker-compose ps                # Ver status
+docker-compose restart           # Reiniciar tudo
+docker-compose restart frontend  # Reiniciar apenas frontend
+docker-compose restart backend   # Reiniciar apenas backend
+docker-compose down              # Parar tudo
+docker-compose up -d             # Iniciar tudo
+
+🗑️ REMOVER TUDO (CUIDADO!)
+───────────────────────────────────────────────────────────
+chmod +x remove-all-containers.sh
+./remove-all-containers.sh
+
+# Ou manual:
+docker-compose down -v
+docker rmi ark-deploy-frontend ark-deploy-backend
+docker volume rm ark-deploy_mongodb_data
+docker builder prune -af
+
+🔄 ATUALIZAR SISTEMA
+───────────────────────────────────────────────────────────
+cd /opt/ark-deploy
+git pull
+./switch-to-production.sh
+
+🌐 ACESSAR PAINEL
+───────────────────────────────────────────────────────────
+Com domínio:  http://painel.38.242.213.195.sslip.io
+Direto (IP):  http://38.242.213.195:8000
+
+API:          http://api.38.242.213.195.sslip.io
+API (IP):     http://38.242.213.195:8001
+
+Login:        admin@admin.com / admin123
+
+🐛 TROUBLESHOOTING
+───────────────────────────────────────────────────────────
+# Container não inicia
+docker-compose logs [nome-container]
+docker-compose restart [nome-container]
+
+# Erro de build
+docker-compose build --no-cache [nome-container]
+
+# Limpar tudo e recomeçar
+./remove-all-containers.sh
+docker-compose up -d --build
+
+# Ver uso de recursos
+docker stats
+
+# Ver processos dentro do container
+docker-compose exec frontend ps aux
+docker-compose exec backend ps aux
+
+📖 DOCUMENTAÇÃO
+───────────────────────────────────────────────────────────
+PRODUCTION.md              - Guia completo de produção
+COMO-MUDAR-PARA-PRODUCAO.md - Como mudar para produção
+TROUBLESHOOTING.md         - Solução de problemas
+README.md                  - Documentação geral
+
+═══════════════════════════════════════════════════════════

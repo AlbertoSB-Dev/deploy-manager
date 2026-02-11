@@ -154,6 +154,15 @@ else
 fi
 echo ""
 
+# Limpar cache e builds antigos
+echo "🧹 Limpando cache..."
+rm -rf frontend/.next frontend/node_modules/.cache backend/dist 2>/dev/null || true
+
+# Build containers em modo produção (ignorando erros de TypeScript)
+echo "🔨 Construindo containers em modo PRODUÇÃO..."
+echo "   (Isso pode demorar 5-10 minutos)"
+docker-compose build --no-cache --pull
+
 # Iniciar containers
 echo "🐳 Iniciando containers..."
 docker-compose up -d
