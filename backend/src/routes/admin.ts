@@ -730,6 +730,387 @@ echo "✅ Atualização concluída!"
   }
 });
 
+// ===== GERENCIAMENTO DE ASSINATURAS (SUPER ADMIN) =====
+
+// Listar todas as assinaturas
+superAdminRouter.get('/subscriptions', async (req: AuthRequest, res) => {
+  try {
+    const users = await User.find({ 'subscription': { $exists: true } })
+      .populate('subscription.planId')
+      .select('name email subscription createdAt')
+      .sort({ 'subscription.endDate': 1 });
+
+    const subscriptions = users.map(user => ({
+      userId: user._id,
+      userName: user.name,
+      userEmail: user.email,
+      subscription: user.subscription,
+      createdAt: user.createdAt,
+    }));
+
+    res.json({
+      success: true,
+      data: subscriptions,
+    });
+  } catch (error: any) {
+    console.error('Erro ao listar assinaturas:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao listar assinaturas',
+    });
+  }
+});
+
+// Atualizar assinatura manualmente
+superAdminRouter.put('/subscriptions/:userId', async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { planId, status, serversCount, endDate } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuário não encontrado',
+      });
+    }
+
+    // Validar plano se fornecido
+    if (planId) {
+      const plan = await Plan.findById(planId);
+      if (!plan) {
+        return res.status(404).json({
+          success: false,
+          error: 'Plano não encontrado',
+        });
+      }
+    }
+
+    // Atualizar subscription
+    if (!user.subscription) {
+      user.subscription = {
+        status: 'trial',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      };
+    }
+
+    if (planId) user.subscription.planId = planId;
+    if (status) user.subscription.status = status;
+    if (serversCount) user.subscription.serversCount = serversCount;
+    if (endDate) user.subscription.endDate = new Date(endDate);
+
+    await user.save();
+
+    const updatedUser = await User.findById(userId).populate('subscription.planId');
+
+    res.json({
+      success: true,
+      message: 'Assinatura atualizada com sucesso',
+      data: {
+        userId: updatedUser!._id,
+        userName: updatedUser!.name,
+        userEmail: updatedUser!.email,
+        subscription: updatedUser!.subscription,
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro ao atualizar assinatura:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao atualizar assinatura',
+    });
+  }
+});
+
+// Criar assinatura manual para usuário
+superAdminRouter.post('/subscriptions/:userId', async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { planId, serversCount, durationDays } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuário não encontrado',
+      });
+    }
+
+    const plan = await Plan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        error: 'Plano não encontrado',
+      });
+    }
+
+    const startDate = new Date();
+    const endDate = new Date(startDate.getTime() + (durationDays || 30) * 24 * 60 * 60 * 1000);
+
+    user.subscription = {
+      planId: plan._id,
+      status: 'active',
+      startDate: startDate,
+      endDate: endDate,
+      serversCount: serversCount || 1,
+    };
+
+    await user.save();
+
+    const updatedUser = await User.findById(userId).populate('subscription.planId');
+
+    res.json({
+      success: true,
+      message: 'Assinatura criada com sucesso',
+      data: {
+        userId: updatedUser!._id,
+        userName: updatedUser!.name,
+        userEmail: updatedUser!.email,
+        subscription: updatedUser!.subscription,
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro ao criar assinatura:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao criar assinatura',
+    });
+  }
+});
+
+// Cancelar assinatura
+superAdminRouter.delete('/subscriptions/:userId', async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuário não encontrado',
+      });
+    }
+
+    if (user.subscription) {
+      user.subscription.status = 'cancelled';
+      user.subscription.endDate = new Date();
+      await user.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Assinatura cancelada com sucesso',
+    });
+  } catch (error: any) {
+    console.error('Erro ao cancelar assinatura:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao cancelar assinatura',
+    });
+  }
+});
+
+// Estender assinatura
+superAdminRouter.post('/subscriptions/:userId/extend', async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { days } = req.body;
+
+    if (!days || days < 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'Número de dias inválido',
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user || !user.subscription) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuário ou assinatura não encontrada',
+      });
+    }
+
+    const currentEndDate = new Date(user.subscription.endDate!);
+    const newEndDate = new Date(currentEndDate.getTime() + days * 24 * 60 * 60 * 1000);
+    
+    user.subscription.endDate = newEndDate;
+    if (user.subscription.status === 'cancelled' || user.subscription.status === 'inactive') {
+      user.subscription.status = 'active';
+    }
+    
+    await user.save();
+
+    const updatedUser = await User.findById(userId).populate('subscription.planId');
+
+    res.json({
+      success: true,
+      message: `Assinatura estendida por ${days} dias`,
+      data: {
+        userId: updatedUser!._id,
+        userName: updatedUser!.name,
+        userEmail: updatedUser!.email,
+        subscription: updatedUser!.subscription,
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro ao estender assinatura:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao estender assinatura',
+    });
+  }
+});
+
+// ===== RELATÓRIO FINANCEIRO (SUPER ADMIN) =====
+
+// Obter relatório financeiro completo
+superAdminRouter.get('/revenue', async (req: AuthRequest, res) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    // Buscar todos os usuários com assinaturas
+    const allUsers = await User.find({ 'subscription': { $exists: true } })
+      .populate('subscription.planId')
+      .select('name email subscription createdAt');
+
+    // Calcular receita total (assinaturas ativas)
+    const activeSubscriptions = allUsers.filter(u => 
+      u.subscription?.status === 'active' && 
+      u.subscription?.planId
+    );
+
+    let monthlyRevenue = 0;
+    let yearlyRevenue = 0;
+
+    activeSubscriptions.forEach(user => {
+      const plan = user.subscription?.planId as any;
+      const serversCount = user.subscription?.serversCount || 1;
+      
+      if (plan && plan.calculatePrice) {
+        const price = plan.calculatePrice(serversCount);
+        monthlyRevenue += price;
+      }
+    });
+
+    // Receita anual estimada (MRR * 12)
+    yearlyRevenue = monthlyRevenue * 12;
+
+    // Novos assinantes este mês
+    const newSubscribersThisMonth = allUsers.filter(u => 
+      u.subscription?.status === 'active' &&
+      new Date(u.subscription.startDate!) >= startOfMonth
+    ).length;
+
+    // Cancelamentos este mês
+    const cancelledThisMonth = allUsers.filter(u => 
+      u.subscription?.status === 'cancelled' &&
+      u.subscription.endDate &&
+      new Date(u.subscription.endDate) >= startOfMonth
+    ).length;
+
+    // Taxa de churn (cancelamentos / total de assinantes ativos)
+    const churnRate = activeSubscriptions.length > 0 
+      ? (cancelledThisMonth / activeSubscriptions.length) * 100 
+      : 0;
+
+    // Receita por plano
+    const revenueByPlan: any = {};
+    activeSubscriptions.forEach(user => {
+      const plan = user.subscription?.planId as any;
+      const serversCount = user.subscription?.serversCount || 1;
+      
+      if (plan) {
+        const planName = plan.name;
+        const price = plan.calculatePrice ? plan.calculatePrice(serversCount) : 0;
+        
+        if (!revenueByPlan[planName]) {
+          revenueByPlan[planName] = {
+            planName,
+            subscribers: 0,
+            revenue: 0,
+          };
+        }
+        
+        revenueByPlan[planName].subscribers += 1;
+        revenueByPlan[planName].revenue += price;
+      }
+    });
+
+    // Receita mensal nos últimos 12 meses (estimativa baseada em assinaturas ativas)
+    const monthlyRevenueHistory = [];
+    for (let i = 11; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = month.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+      
+      // Simplificado: usar receita atual para todos os meses (em produção, você teria histórico real)
+      monthlyRevenueHistory.push({
+        month: monthName,
+        revenue: monthlyRevenue,
+      });
+    }
+
+    // Distribuição de status
+    const statusDistribution = {
+      active: allUsers.filter(u => u.subscription?.status === 'active').length,
+      trial: allUsers.filter(u => u.subscription?.status === 'trial').length,
+      cancelled: allUsers.filter(u => u.subscription?.status === 'cancelled').length,
+      inactive: allUsers.filter(u => u.subscription?.status === 'inactive').length,
+    };
+
+    // Top clientes (por receita)
+    const topCustomers = activeSubscriptions
+      .map(user => {
+        const plan = user.subscription?.planId as any;
+        const serversCount = user.subscription?.serversCount || 1;
+        const price = plan && plan.calculatePrice ? plan.calculatePrice(serversCount) : 0;
+        
+        return {
+          userId: user._id,
+          userName: user.name,
+          userEmail: user.email,
+          planName: plan?.name || 'Sem plano',
+          serversCount,
+          monthlyRevenue: price,
+          startDate: user.subscription?.startDate,
+        };
+      })
+      .sort((a, b) => b.monthlyRevenue - a.monthlyRevenue)
+      .slice(0, 10);
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          monthlyRevenue,
+          yearlyRevenue,
+          activeSubscribers: activeSubscriptions.length,
+          totalSubscribers: allUsers.length,
+          newSubscribersThisMonth,
+          cancelledThisMonth,
+          churnRate: churnRate.toFixed(2),
+          averageRevenuePerUser: activeSubscriptions.length > 0 
+            ? (monthlyRevenue / activeSubscriptions.length).toFixed(2) 
+            : 0,
+        },
+        revenueByPlan: Object.values(revenueByPlan),
+        monthlyRevenueHistory,
+        statusDistribution,
+        topCustomers,
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro ao gerar relatório financeiro:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao gerar relatório financeiro',
+    });
+  }
+});
+
 // Montar os routers
 router.use('/', adminRouter);
 router.use('/', superAdminRouter);

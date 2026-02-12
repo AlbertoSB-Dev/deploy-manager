@@ -3,7 +3,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, Users, CreditCard, Settings, Rocket, Shield, Menu, X, Activity, ArrowLeft, LogOut } from 'lucide-react';
+import { BarChart3, Users, CreditCard, Settings, Rocket, Shield, Menu, X, Activity, ArrowLeft, LogOut, DollarSign } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -54,6 +54,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { icon: BarChart3, label: 'Dashboard', href: '/admin' },
     { icon: Users, label: 'Usuários', href: '/admin/users' },
     { icon: CreditCard, label: 'Planos', href: '/admin/plans' },
+    { icon: CreditCard, label: 'Assinaturas', href: '/admin/subscriptions' },
+    { icon: DollarSign, label: 'Receita', href: '/admin/revenue' },
     { icon: Settings, label: 'Configurações', href: '/admin/settings' },
     { icon: Activity, label: 'Monitoramento', href: '/admin/monitoring' },
     { icon: Rocket, label: 'Deploy Painel', href: '/admin/panel-deploy' },
