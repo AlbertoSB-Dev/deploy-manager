@@ -220,13 +220,13 @@ export default function ProfilePage() {
         color: 'green',
         icon: <CheckCircle className="w-5 h-5" />
       };
-    } else if (status === 'canceled') {
+    } else if (status === 'cancelled') {
       return { 
         text: 'Cancelada', 
         color: 'red',
         icon: <X className="w-5 h-5" />
       };
-    } else if (status === 'expired') {
+    } else if (status === 'inactive') {
       return { 
         text: 'Expirada', 
         color: 'orange',
@@ -531,6 +531,14 @@ export default function ProfilePage() {
               </div>
 
               <div className="mt-4 space-y-2">
+                <button
+                  onClick={() => router.push('/billing')}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2 font-medium"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Ver Histórico de Pagamentos
+                </button>
+
                 {user.subscription?.status === 'active' && (
                   <button
                     onClick={handleCancelSubscription}
@@ -541,7 +549,7 @@ export default function ProfilePage() {
                   </button>
                 )}
 
-                {(user.subscription?.status === 'trial' || user.subscription?.status === 'expired') && (
+                {(user.subscription?.status === 'trial' || user.subscription?.status === 'inactive') && (
                   <button
                     onClick={() => router.push('/pricing')}
                     className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition shadow-md flex items-center justify-center gap-2 font-medium"

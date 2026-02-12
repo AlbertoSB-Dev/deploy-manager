@@ -20,6 +20,7 @@ export interface IUser extends Document {
     serversCount?: number;
     assasCustomerId?: string;      // ID do cliente no Assas
     assasSubscriptionId?: string;  // ID da assinatura no Assas
+    autoRenew?: boolean;           // Renovação automática ativada
   };
   createdAt: Date;
   updatedAt: Date;
@@ -102,6 +103,10 @@ const UserSchema = new Schema({
     },
     assasSubscriptionId: {
       type: String,
+    },
+    autoRenew: {
+      type: Boolean,
+      default: true,
     },
   },
   createdAt: {

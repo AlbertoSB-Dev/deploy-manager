@@ -24,6 +24,7 @@ import backupRoutes from './routes/backups';
 import logsRoutes from './routes/logs';
 import panelDeployRoutes from './routes/panel-deploy';
 import paymentRoutes from './routes/payments';
+import billingRoutes from './routes/billing';
 import plansRoutes from './routes/plans';
 import monitoringRoutes from './routes/monitoring';
 import { UpdateCheckerService } from './services/UpdateCheckerService';
@@ -125,6 +126,7 @@ app.use('/api/backups', backupRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/panel-deploy', panelDeployRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/billing', billingRoutes);
 app.use('/api/plans', plansRoutes);
 app.use('/api/monitoring', monitoringRoutes);
 
