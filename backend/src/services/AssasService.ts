@@ -226,20 +226,36 @@ export class AssasService {
   /**
    * Criar cobrança única (invoice)
    */
-  async createInvoice(customerId: string, value: number, description: string, dueDate: string) {
+  async createInvoice(
+    customerId: string, 
+    value: number, 
+    description: string, 
+    dueDate: string,
+    billingType: 'BOLETO' | 'PIX' = 'BOLETO'
+  ) {
     try {
       await this.ensureClient();
       if (!this.client) throw new Error('Cliente Assas não inicializado');
 
-      const response = await this.client.post('/payments', {
+      const paymentData: any = {
         customer: customerId,
-        billingType: 'BOLETO',
+        billingType,
         value,
         description,
         dueDate,
-      });
+      };
 
-      console.log('✅ Cobrança criada no Assas:', response.data.id);
+      // Se for PIX, configurar desconto para incentivar pagamento rápido
+      if (billingType === 'PIX') {
+        paymentData.discount = {
+          value: value * 0.02, // 2% de desconto
+          dueDateLimitDays: 0, // Válido apenas no dia
+        };
+      }
+
+      const response = await this.client.post('/payments', paymentData);
+
+      console.log(`✅ Cobrança ${billingType} criada no Assas:`, response.data.id);
       return response.data;
     } catch (error: any) {
       console.error('❌ Erro ao criar cobrança:', error.response?.data || error.message);

@@ -178,4 +178,104 @@ router.get('/invoice/:paymentId', protect, async (req: AuthRequest, res: Respons
   }
 });
 
+/**
+ * @route   GET /api/billing/pending-invoices
+ * @desc    Obter faturas pendentes (PIX/Boleto)
+ * @access  Private
+ */
+router.get('/pending-invoices', protect, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+
+    const pendingInvoices = await PaymentHistory.find({
+      userId,
+      status: 'pending',
+      paymentMethod: { $in: ['PIX', 'BOLETO'] },
+      dueDate: { $gte: new Date() },
+    })
+      .populate('planId', 'name')
+      .sort({ dueDate: 1 });
+
+    res.json({
+      success: true,
+      data: pendingInvoices,
+    });
+  } catch (error: any) {
+    console.error('Erro ao buscar faturas pendentes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar faturas pendentes',
+    });
+  }
+});
+
+/**
+ * @route   POST /api/billing/generate-new-invoice/:paymentId
+ * @desc    Gerar nova via de pagamento (segunda via)
+ * @access  Private
+ */
+router.post('/generate-new-invoice/:paymentId', protect, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const { paymentId } = req.params;
+
+    const payment = await PaymentHistory.findOne({
+      _id: paymentId,
+      userId,
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Fatura não encontrada',
+      });
+    }
+
+    if (payment.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        error: 'Esta fatura já foi paga ou cancelada',
+      });
+    }
+
+    // Buscar usuário para pegar assasCustomerId
+    const user = await User.findById(userId);
+    if (!user || !user.subscription?.assasCustomerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Dados de pagamento não encontrados',
+      });
+    }
+
+    // Gerar nova cobrança no Assas
+    const AssasService = (await import('../services/AssasService')).default;
+    const newInvoice = await AssasService.createInvoice(
+      user.subscription.assasCustomerId,
+      payment.amount,
+      payment.description,
+      payment.dueDate!.toISOString().split('T')[0],
+      payment.paymentMethod as 'BOLETO' | 'PIX'
+    );
+
+    // Atualizar URL da fatura
+    payment.assasInvoiceUrl = newInvoice.invoiceUrl || newInvoice.bankSlipUrl;
+    payment.assasPaymentId = newInvoice.id;
+    await payment.save();
+
+    res.json({
+      success: true,
+      message: 'Nova via gerada com sucesso',
+      data: {
+        invoiceUrl: payment.assasInvoiceUrl,
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro ao gerar nova via:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao gerar nova via de pagamento',
+    });
+  }
+});
+
 export default router;

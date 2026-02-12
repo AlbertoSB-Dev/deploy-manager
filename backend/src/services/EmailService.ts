@@ -369,6 +369,83 @@ export class EmailService {
       html,
     });
   }
+
+  /**
+   * Email com fatura de renovação (PIX/Boleto)
+   */
+  async sendRenewalInvoice(user: IUser, planName: string, amount: number, invoiceUrl: string, dueDate: Date): Promise<boolean> {
+    const dueDateFormatted = dueDate.toLocaleDateString('pt-BR');
+    const amountFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .button { display: inline-block; padding: 15px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+          .info-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+          .highlight { color: #667eea; font-weight: bold; font-size: 24px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>💳 Fatura de Renovação</h1>
+          </div>
+          <div class="content">
+            <p>Olá <strong>${user.name}</strong>,</p>
+            
+            <p>Sua assinatura do plano <strong>${planName}</strong> está próxima da renovação!</p>
+            
+            <div class="info-box">
+              <p><strong>📋 Detalhes da Cobrança:</strong></p>
+              <p>Valor: <span class="highlight">${amountFormatted}</span></p>
+              <p>Vencimento: <strong>${dueDateFormatted}</strong></p>
+              <p>Plano: <strong>${planName}</strong></p>
+            </div>
+            
+            <p>Como você utiliza <strong>PIX ou Boleto</strong>, geramos uma nova cobrança para você pagar e manter sua assinatura ativa.</p>
+            
+            <div style="text-align: center;">
+              <a href="${invoiceUrl}" class="button">
+                📄 Ver Fatura e Pagar
+              </a>
+            </div>
+            
+            <div class="info-box" style="border-left-color: #f59e0b;">
+              <p><strong>⚠️ Importante:</strong></p>
+              <ul>
+                <li>Pague até <strong>${dueDateFormatted}</strong> para manter sua assinatura ativa</li>
+                <li>Após o vencimento, sua assinatura será suspensa</li>
+                <li>Você pode acessar a fatura a qualquer momento na página de Cobrança</li>
+              </ul>
+            </div>
+            
+            <p>Se preferir renovação automática, considere atualizar para pagamento com cartão de crédito.</p>
+            
+            <p>Qualquer dúvida, estamos à disposição!</p>
+            
+            <p>Atenciosamente,<br><strong>Equipe Ark Deploy</strong></p>
+          </div>
+          <div class="footer">
+            <p>Este é um email automático, por favor não responda.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: user.email,
+      subject: `💳 Fatura de Renovação - ${planName}`,
+      html,
+    });
+  }
 }
 
 export default new EmailService();

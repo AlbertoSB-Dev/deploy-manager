@@ -41,6 +41,11 @@ interface Payment {
   createdAt: string;
 }
 
+interface PendingInvoice extends Payment {
+  dueDate: string;
+  assasInvoiceUrl: string;
+}
+
 interface SubscriptionDetails {
   subscription: {
     planId?: {
@@ -63,9 +68,11 @@ export default function BillingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [pendingInvoices, setPendingInvoices] = useState<PendingInvoice[]>([]);
   const [subscriptionDetails, setSubscriptionDetails] = useState<SubscriptionDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [autoRenewLoading, setAutoRenewLoading] = useState(false);
+  const [generatingInvoice, setGeneratingInvoice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -78,12 +85,14 @@ export default function BillingPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [historyRes, detailsRes] = await Promise.all([
+      const [historyRes, detailsRes, pendingRes] = await Promise.all([
         api.get('/billing/history'),
         api.get('/billing/subscription-details'),
+        api.get('/billing/pending-invoices'),
       ]);
       setPayments(historyRes.data.data);
       setSubscriptionDetails(detailsRes.data.data);
+      setPendingInvoices(pendingRes.data.data);
     } catch (error: any) {
       toast.error('Erro ao carregar dados de cobrança');
       console.error(error);
@@ -120,6 +129,27 @@ export default function BillingPage() {
       console.error(error);
     } finally {
       setAutoRenewLoading(false);
+    }
+  };
+
+  const generateNewInvoice = async (paymentId: string) => {
+    try {
+      setGeneratingInvoice(paymentId);
+      const res = await api.post(`/billing/generate-new-invoice/${paymentId}`);
+      toast.success('Nova via gerada com sucesso!');
+      
+      // Abrir fatura em nova aba
+      if (res.data.data.invoiceUrl) {
+        window.open(res.data.data.invoiceUrl, '_blank');
+      }
+      
+      // Recarregar dados
+      loadData();
+    } catch (error: any) {
+      toast.error('Erro ao gerar nova via');
+      console.error(error);
+    } finally {
+      setGeneratingInvoice(null);
     }
   };
 
@@ -337,6 +367,96 @@ export default function BillingPage() {
             )}
           </div>
         </div>
+
+        {/* Faturas Pendentes (PIX/Boleto) */}
+        {pendingInvoices.length > 0 && (
+          <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/10 dark:to-red-900/10 rounded-xl shadow-sm border-2 border-orange-300 dark:border-orange-700 overflow-hidden">
+            <div className="p-6 border-b border-orange-200 dark:border-orange-800 bg-orange-100 dark:bg-orange-900/20">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Faturas Pendentes
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Você tem {pendingInvoices.length} fatura(s) aguardando pagamento
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {pendingInvoices.map((invoice) => {
+                const daysUntilDue = Math.ceil(
+                  (new Date(invoice.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                );
+                const isOverdue = daysUntilDue < 0;
+                const isUrgent = daysUntilDue <= 3 && daysUntilDue >= 0;
+
+                return (
+                  <div
+                    key={invoice._id}
+                    className={`p-4 rounded-lg border-2 ${
+                      isOverdue
+                        ? 'bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-700'
+                        : isUrgent
+                        ? 'bg-orange-50 dark:bg-orange-900/10 border-orange-300 dark:border-orange-700'
+                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          {getPaymentMethodIcon(invoice.paymentMethod)}
+                          <h3 className="font-semibold text-gray-900 dark:text-white">
+                            {invoice.description}
+                          </h3>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-600 dark:text-gray-400">Valor</p>
+                            <p className="font-bold text-lg text-gray-900 dark:text-white">
+                              {formatCurrency(invoice.amount)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-600 dark:text-gray-400">Vencimento</p>
+                            <p className={`font-semibold ${
+                              isOverdue ? 'text-red-600 dark:text-red-400' :
+                              isUrgent ? 'text-orange-600 dark:text-orange-400' :
+                              'text-gray-900 dark:text-white'
+                            }`}>
+                              {formatDate(invoice.dueDate)}
+                              {isOverdue && ' (Vencido)'}
+                              {isUrgent && ` (${daysUntilDue} dias)`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <a
+                          href={invoice.assasInvoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium text-center whitespace-nowrap"
+                        >
+                          {invoice.paymentMethod === 'PIX' ? '📱 Pagar com PIX' : '📄 Ver Boleto'}
+                        </a>
+                        <button
+                          onClick={() => generateNewInvoice(invoice._id)}
+                          disabled={generatingInvoice === invoice._id}
+                          className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition text-sm disabled:opacity-50"
+                        >
+                          {generatingInvoice === invoice._id ? 'Gerando...' : '🔄 Nova Via'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Histórico de Pagamentos */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
