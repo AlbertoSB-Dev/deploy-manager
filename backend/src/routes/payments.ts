@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { protect, AuthRequest } from '../middleware/auth';
 import User from '../models/User';
 import Plan from '../models/Plan';
+import PaymentHistory from '../models/PaymentHistory';
 import AssasService from '../services/AssasService';
 import EmailService from '../services/EmailService';
 
@@ -83,7 +84,13 @@ router.post('/subscribe', protect, async (req: AuthRequest, res: Response) => {
         assasCustomerId = customer.id;
 
         // Salvar ID do cliente Assas no usuário
-        user.subscription = user.subscription || {};
+        if (!user.subscription) {
+          user.subscription = {
+            status: 'trial',
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+          };
+        }
         user.subscription.assasCustomerId = assasCustomerId;
         await user.save();
       } catch (error: any) {
@@ -119,10 +126,17 @@ router.post('/subscribe', protect, async (req: AuthRequest, res: Response) => {
     }
 
     // Criar assinatura no Assas
+    if (!assasCustomerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID do cliente Assas não encontrado',
+      });
+    }
+
     try {
       const subscription = await AssasService.createSubscription({
         customerId: assasCustomerId,
-        planId: assasPlanId,
+        planId: assasPlanId!,
         billingType: billingType as 'CREDIT_CARD' | 'PIX' | 'BOLETO',
         creditCard: creditCard,
       });
@@ -136,8 +150,42 @@ router.post('/subscribe', protect, async (req: AuthRequest, res: Response) => {
         assasSubscriptionId: subscription.id,
         assasCustomerId: assasCustomerId,
         serversCount: servers || 1,
+        autoRenew: true,
       };
       await user.save();
+
+      // Criar registro no histórico de pagamentos (pagamento inicial)
+      await PaymentHistory.create({
+        userId: user._id,
+        planId: plan._id,
+        amount: expectedPrice,
+        status: 'pending',
+        paymentMethod: billingType,
+        description: `Assinatura ${plan.name} - ${servers || 1} servidor(es)`,
+        assasPaymentId: subscription.id,
+        dueDate: subscription.nextDueDate,
+        serversCount: servers || 1,
+        metadata: {
+          newPlan: plan.name,
+          changeType: 'new',
+        },
+      });
+
+      // Criar registro do próximo pagamento (renovação futura)
+      const nextRenewalDate = new Date(Date.now() + (plan.interval === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000);
+      await PaymentHistory.create({
+        userId: user._id,
+        planId: plan._id,
+        amount: expectedPrice,
+        status: 'pending',
+        paymentMethod: billingType,
+        description: `Renovação ${plan.name} - ${servers || 1} servidor(es)`,
+        dueDate: nextRenewalDate,
+        serversCount: servers || 1,
+        metadata: {
+          changeType: 'renewal',
+        },
+      });
 
       res.json({
         success: true,
@@ -306,6 +354,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
       case 'payment_received': {
         // Atualizar status do usuário para ativo
         const subscriptionId = processedEvent.data?.subscription?.id || processedEvent.data?.id;
+        const paymentId = processedEvent.data?.payment?.id;
         
         if (subscriptionId) {
           const user = await User.findOne({ 'subscription.assasSubscriptionId': subscriptionId });
@@ -333,6 +382,47 @@ router.post('/webhook', async (req: Request, res: Response) => {
             
             await user.save();
             console.log(`✅ Assinatura ativada até: ${endDate.toISOString()}`);
+            
+            // Atualizar histórico de pagamento
+            if (paymentId) {
+              const payment = await PaymentHistory.findOne({ 
+                userId: user._id,
+                assasPaymentId: paymentId 
+              });
+              
+              if (payment) {
+                payment.status = 'received';
+                payment.paymentDate = new Date();
+                await payment.save();
+                console.log(`✅ Pagamento marcado como recebido no histórico`);
+              }
+            }
+            
+            // Criar próximo pagamento pendente se não existir
+            const nextRenewalDate = new Date(endDate);
+            const existingNextPayment = await PaymentHistory.findOne({
+              userId: user._id,
+              status: 'pending',
+              dueDate: { $gte: new Date() },
+            });
+            
+            if (!existingNextPayment && plan) {
+              const amount = (plan as any).calculatePrice(user.subscription?.serversCount || 1);
+              await PaymentHistory.create({
+                userId: user._id,
+                planId: plan._id,
+                amount: amount,
+                status: 'pending',
+                paymentMethod: 'CREDIT_CARD',
+                description: `Renovação ${plan.name} - ${user.subscription?.serversCount || 1} servidor(es)`,
+                dueDate: nextRenewalDate,
+                serversCount: user.subscription?.serversCount || 1,
+                metadata: {
+                  changeType: 'renewal',
+                },
+              });
+              console.log(`✅ Próximo pagamento criado para: ${nextRenewalDate.toISOString()}`);
+            }
             
             // Enviar email de confirmação
             const planName = plan?.name || 'Plano';
@@ -527,6 +617,43 @@ router.post('/change-servers', protect, async (req: AuthRequest, res: Response) 
     await user.save();
 
     console.log('✅ Quantidade de servidores atualizada no MongoDB');
+
+    // Criar registro no histórico de pagamentos
+    if (proportionalValue > 0 && newServersCount > currentServers) {
+      // Upgrade - cobrança imediata
+      await PaymentHistory.create({
+        userId: user._id,
+        planId: plan._id,
+        amount: proportionalValue,
+        status: 'pending',
+        paymentMethod: 'CREDIT_CARD',
+        description: `Upgrade para ${newServersCount} servidores (cobrança proporcional)`,
+        dueDate: new Date(),
+        serversCount: newServersCount,
+        metadata: {
+          previousPlan: `${currentServers} servidor(es)`,
+          newPlan: `${newServersCount} servidor(es)`,
+          changeType: 'upgrade',
+        },
+      });
+    } else if (newServersCount < currentServers) {
+      // Downgrade - crédito futuro
+      await PaymentHistory.create({
+        userId: user._id,
+        planId: plan._id,
+        amount: Math.abs(proportionalValue),
+        status: 'confirmed',
+        paymentMethod: 'CREDIT_CARD',
+        description: `Downgrade para ${newServersCount} servidores (crédito aplicado)`,
+        paymentDate: new Date(),
+        serversCount: newServersCount,
+        metadata: {
+          previousPlan: `${currentServers} servidor(es)`,
+          newPlan: `${newServersCount} servidor(es)`,
+          changeType: 'downgrade',
+        },
+      });
+    }
 
     res.json({
       success: true,
