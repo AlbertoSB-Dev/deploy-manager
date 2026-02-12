@@ -33,9 +33,10 @@ interface RevenueData {
     subscribers: number;
     revenue: number;
   }>;
-  monthlyRevenueHistory: Array<{
+  subscriberHistory: Array<{
     month: string;
-    revenue: number;
+    newSubscribers: number;
+    cancelledSubscribers: number;
   }>;
   statusDistribution: {
     active: number;
@@ -231,6 +232,31 @@ export default function RevenuePage() {
         </div>
       </div>
 
+      {/* Gráfico de Novos Assinantes vs Cancelamentos */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              Novos Assinantes vs Cancelamentos
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Últimos 12 meses
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Novos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Cancelamentos</span>
+            </div>
+          </div>
+        </div>
+        <SubscriberChart data={data.subscriberHistory} />
+      </div>
+
       {/* Receita por Plano */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
@@ -381,6 +407,197 @@ export default function RevenuePage() {
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Inativas</p>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Componente de Gráfico de Linhas
+function SubscriberChart({ data }: { data: Array<{ month: string; newSubscribers: number; cancelledSubscribers: number }> }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+        Sem dados disponíveis
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(
+    ...data.map(d => Math.max(d.newSubscribers, d.cancelledSubscribers)),
+    5 // Valor mínimo para evitar gráfico muito pequeno
+  );
+
+  const padding = 40;
+  const width = 800;
+  const height = 300;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+
+  // Calcular pontos para as linhas
+  const getX = (index: number) => padding + (index * chartWidth) / (data.length - 1);
+  const getY = (value: number) => height - padding - (value / maxValue) * chartHeight;
+
+  // Criar path para linha de novos assinantes
+  const newSubscribersPath = data
+    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.newSubscribers)}`)
+    .join(' ');
+
+  // Criar path para linha de cancelamentos
+  const cancelledPath = data
+    .map((d, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.cancelledSubscribers)}`)
+    .join(' ');
+
+  // Criar área preenchida para novos assinantes
+  const newSubscribersArea = `${newSubscribersPath} L ${getX(data.length - 1)} ${height - padding} L ${padding} ${height - padding} Z`;
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full h-auto"
+        style={{ minHeight: '300px' }}
+      >
+        {/* Grid horizontal */}
+        {[0, 0.25, 0.5, 0.75, 1].map((percent) => {
+          const y = height - padding - percent * chartHeight;
+          return (
+            <g key={percent}>
+              <line
+                x1={padding}
+                y1={y}
+                x2={width - padding}
+                y2={y}
+                stroke="currentColor"
+                strokeWidth="1"
+                className="text-gray-200 dark:text-gray-700"
+                strokeDasharray="4 4"
+              />
+              <text
+                x={padding - 10}
+                y={y + 5}
+                textAnchor="end"
+                className="text-xs fill-gray-500 dark:fill-gray-400"
+              >
+                {Math.round(maxValue * percent)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Área preenchida para novos assinantes */}
+        <path
+          d={newSubscribersArea}
+          fill="url(#greenGradient)"
+          opacity="0.1"
+        />
+
+        {/* Linha de novos assinantes */}
+        <path
+          d={newSubscribersPath}
+          fill="none"
+          stroke="#10b981"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Linha de cancelamentos */}
+        <path
+          d={cancelledPath}
+          fill="none"
+          stroke="#ef4444"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Pontos na linha de novos assinantes */}
+        {data.map((d, i) => (
+          <g key={`new-${i}`}>
+            <circle
+              cx={getX(i)}
+              cy={getY(d.newSubscribers)}
+              r="5"
+              fill="#10b981"
+              className="hover:r-7 transition-all cursor-pointer"
+            />
+            <title>{`${d.month}: ${d.newSubscribers} novos`}</title>
+          </g>
+        ))}
+
+        {/* Pontos na linha de cancelamentos */}
+        {data.map((d, i) => (
+          <g key={`cancelled-${i}`}>
+            <circle
+              cx={getX(i)}
+              cy={getY(d.cancelledSubscribers)}
+              r="5"
+              fill="#ef4444"
+              className="hover:r-7 transition-all cursor-pointer"
+            />
+            <title>{`${d.month}: ${d.cancelledSubscribers} cancelamentos`}</title>
+          </g>
+        ))}
+
+        {/* Labels dos meses */}
+        {data.map((d, i) => {
+          // Mostrar apenas alguns labels para não ficar muito poluído
+          if (i % 2 === 0 || i === data.length - 1) {
+            return (
+              <text
+                key={`label-${i}`}
+                x={getX(i)}
+                y={height - padding + 20}
+                textAnchor="middle"
+                className="text-xs fill-gray-600 dark:fill-gray-400"
+              >
+                {d.month}
+              </text>
+            );
+          }
+          return null;
+        })}
+
+        {/* Gradiente para área preenchida */}
+        <defs>
+          <linearGradient id="greenGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      {/* Estatísticas do gráfico */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Novos</p>
+          <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+            {data.reduce((sum, d) => sum + d.newSubscribers, 0)}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Cancelamentos</p>
+          <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+            {data.reduce((sum, d) => sum + d.cancelledSubscribers, 0)}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Média Novos/Mês</p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {Math.round(data.reduce((sum, d) => sum + d.newSubscribers, 0) / data.length)}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Crescimento Líquido</p>
+          <p className={`text-2xl font-bold ${
+            data.reduce((sum, d) => sum + d.newSubscribers - d.cancelledSubscribers, 0) >= 0
+              ? 'text-green-600 dark:text-green-400'
+              : 'text-red-600 dark:text-red-400'
+          }`}>
+            {data.reduce((sum, d) => sum + d.newSubscribers - d.cancelledSubscribers, 0) >= 0 ? '+' : ''}
+            {data.reduce((sum, d) => sum + d.newSubscribers - d.cancelledSubscribers, 0)}
+          </p>
         </div>
       </div>
     </div>

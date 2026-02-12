@@ -1040,16 +1040,31 @@ superAdminRouter.get('/revenue', async (req: AuthRequest, res) => {
       }
     });
 
-    // Receita mensal nos últimos 12 meses (estimativa baseada em assinaturas ativas)
-    const monthlyRevenueHistory = [];
+    // Histórico de novos assinantes e cancelamentos nos últimos 12 meses
+    const subscriberHistory = [];
     for (let i = 11; i >= 0; i--) {
-      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthName = month.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+      const monthName = monthStart.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
       
-      // Simplificado: usar receita atual para todos os meses (em produção, você teria histórico real)
-      monthlyRevenueHistory.push({
+      // Contar novos assinantes neste mês (status active e startDate no mês)
+      const newSubscribers = allUsers.filter(u => {
+        if (!u.subscription?.startDate) return false;
+        const startDate = new Date(u.subscription.startDate);
+        return startDate >= monthStart && startDate <= monthEnd && u.subscription.status === 'active';
+      }).length;
+      
+      // Contar cancelamentos neste mês (status cancelled e endDate no mês)
+      const cancelledSubscribers = allUsers.filter(u => {
+        if (!u.subscription?.endDate) return false;
+        const endDate = new Date(u.subscription.endDate);
+        return endDate >= monthStart && endDate <= monthEnd && u.subscription.status === 'cancelled';
+      }).length;
+      
+      subscriberHistory.push({
         month: monthName,
-        revenue: monthlyRevenue,
+        newSubscribers,
+        cancelledSubscribers,
       });
     }
 
@@ -1097,7 +1112,7 @@ superAdminRouter.get('/revenue', async (req: AuthRequest, res) => {
             : 0,
         },
         revenueByPlan: Object.values(revenueByPlan),
-        monthlyRevenueHistory,
+        subscriberHistory,
         statusDistribution,
         topCustomers,
       },
