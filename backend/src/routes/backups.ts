@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { backupService } from '../services/BackupService';
 import { protect, AuthRequest } from '../middleware/auth';
+import { checkSubscriptionActive, checkCanModify } from '../middleware/subscription';
 import Backup from '../models/Backup';
 
 const router = Router();
@@ -41,7 +42,7 @@ router.get('/:id', protect, async (req: AuthRequest, res) => {
 });
 
 // Criar backup manual
-router.post('/', protect, async (req: AuthRequest, res) => {
+router.post('/', protect, checkSubscriptionActive, async (req: AuthRequest, res) => {
   try {
     const { resourceId, type, storageType, minioConfig } = req.body;
 
@@ -66,7 +67,7 @@ router.post('/', protect, async (req: AuthRequest, res) => {
 });
 
 // Criar backup de banco de dados
-router.post('/database/:databaseId', protect, async (req: AuthRequest, res) => {
+router.post('/database/:databaseId', protect, checkSubscriptionActive, async (req: AuthRequest, res) => {
   try {
     const { storageType, minioConfig } = req.body;
 
@@ -85,7 +86,7 @@ router.post('/database/:databaseId', protect, async (req: AuthRequest, res) => {
 });
 
 // Criar backup de projeto
-router.post('/project/:projectId', protect, async (req: AuthRequest, res) => {
+router.post('/project/:projectId', protect, checkSubscriptionActive, async (req: AuthRequest, res) => {
   try {
     const { storageType, minioConfig } = req.body;
 
@@ -104,7 +105,7 @@ router.post('/project/:projectId', protect, async (req: AuthRequest, res) => {
 });
 
 // Criar backup de WordPress
-router.post('/wordpress/:wordpressId', protect, async (req: AuthRequest, res) => {
+router.post('/wordpress/:wordpressId', protect, checkSubscriptionActive, async (req: AuthRequest, res) => {
   try {
     const { storageType, minioConfig } = req.body;
 
@@ -123,7 +124,7 @@ router.post('/wordpress/:wordpressId', protect, async (req: AuthRequest, res) =>
 });
 
 // Restaurar backup
-router.post('/:id/restore', protect, async (req: AuthRequest, res) => {
+router.post('/:id/restore', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
     const { targetResourceId } = req.body;
 
@@ -140,7 +141,7 @@ router.post('/:id/restore', protect, async (req: AuthRequest, res) => {
 });
 
 // Deletar backup
-router.delete('/:id', protect, async (req: AuthRequest, res) => {
+router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
     await backupService.deleteBackup(req.params.id, req.user?._id!);
     res.json({ message: 'Backup deletado com sucesso' });

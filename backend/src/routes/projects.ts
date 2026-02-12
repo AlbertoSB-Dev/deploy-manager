@@ -6,6 +6,7 @@ import { GitCredentialService } from '../services/GitCredentialService';
 import { PortManager } from '../services/PortManager';
 import { UpdateCheckerService } from '../services/UpdateCheckerService';
 import { protect, AuthRequest } from '../middleware/auth';
+import { checkSubscriptionActive, checkCanModify } from '../middleware/subscription';
 import { validateCommand } from '../utils/commandValidator';
 import path from 'path';
 
@@ -38,7 +39,7 @@ router.get('/:id', protect, async (req: AuthRequest, res) => {
 });
 
 // Criar novo projeto
-router.post('/', protect, async (req: AuthRequest, res) => {
+router.post('/', protect, checkSubscriptionActive, async (req: AuthRequest, res) => {
   try {
     const { name, displayName, gitUrl, branch, type, port, envVars, buildCommand, startCommand, gitAuth, serverId, serverName } = req.body;
     
@@ -143,7 +144,7 @@ router.post('/', protect, async (req: AuthRequest, res) => {
 });
 
 // Atualizar projeto
-router.put('/:id', protect, async (req: AuthRequest, res) => {
+router.put('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
     const { name, domain, port, branch, buildCommand, startCommand, envVars } = req.body;
     
@@ -182,7 +183,7 @@ router.put('/:id', protect, async (req: AuthRequest, res) => {
 });
 
 // Deletar projeto
-router.delete('/:id', protect, async (req: AuthRequest, res) => {
+router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
@@ -202,7 +203,7 @@ router.delete('/:id', protect, async (req: AuthRequest, res) => {
 });
 
 // Deploy projeto
-router.post('/:id/deploy', protect, async (req: AuthRequest, res) => {
+router.post('/:id/deploy', protect, checkSubscriptionActive, async (req: AuthRequest, res) => {
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 

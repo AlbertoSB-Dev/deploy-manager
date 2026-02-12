@@ -36,11 +36,10 @@ export default function PricingPage() {
 
   const loadPlans = async () => {
     try {
-      const response = await api.get('/admin/plans');
-      const activePlans = response.data.filter((p: Plan) => p.isActive);
-      setPlans(activePlans);
-      if (activePlans.length > 0) {
-        setSelectedPlan(activePlans[0]._id);
+      const response = await api.get('/plans');
+      setPlans(response.data);
+      if (response.data.length > 0) {
+        setSelectedPlan(response.data[0]._id);
       }
     } catch (error) {
       console.error('Erro ao carregar planos:', error);
@@ -90,7 +89,7 @@ export default function PricingPage() {
               <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl">
                 <Zap className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white">Ark Deploy</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent tracking-tight animate-gradient bg-[length:200%_auto]">Ark Deploy</span>
             </Link>
             <div className="flex gap-4">
               <Link
@@ -231,7 +230,7 @@ export default function PricingPage() {
               </div>
 
               <Link
-                href="/register"
+                href={`/checkout?planId=${selectedPlan}&servers=${servers}`}
                 className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
               >
                 Começar Agora

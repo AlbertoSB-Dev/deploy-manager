@@ -40,8 +40,29 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link href="/" className="flex items-center justify-center mb-8">
-          <Image src="/logo.png" alt="Ark Deploy" width={60} height={60} />
+        <Link href="/" className="flex flex-col items-center justify-center mb-8 gap-3 group">
+          <div className="relative">
+            {/* Glow Effect */}
+            <div className="absolute inset-0 blur-xl opacity-40 group-hover:opacity-60 transition-opacity">
+              <img 
+                src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+                alt="Ark Deploy Glow" 
+                className="w-16 h-16"
+              />
+            </div>
+            {/* Logo Principal */}
+            <div className="relative">
+              <div className="absolute -inset-2 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full opacity-20 group-hover:opacity-30 blur-lg transition-opacity"></div>
+              <img 
+                src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+                alt="Ark Deploy" 
+                className="relative w-16 h-16 drop-shadow-xl transform group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+          </div>
+          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent tracking-tight animate-gradient bg-[length:200%_auto]">
+            Ark Deploy
+          </span>
         </Link>
 
         {/* Card */}

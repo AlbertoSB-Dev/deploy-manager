@@ -24,6 +24,18 @@ if (typeof window !== 'undefined') {
   io = socketIO;
 }
 
+interface UpdateInfo {
+  hasUpdates: boolean;
+  localCommit: string;
+  remoteCommit: string;
+  updateInfo?: {
+    commitsAhead: number;
+    latestCommit: string;
+    latestCommitMessage: string;
+    latestCommitDate: string;
+  };
+}
+
 export default function PanelDeployManager() {
   const [versions, setVersions] = useState<PanelVersion[]>([]);
   const [currentVersion, setCurrentVersion] = useState('');
@@ -34,9 +46,12 @@ export default function PanelDeployManager() {
   const [showNewVersionModal, setShowNewVersionModal] = useState(false);
   const [newVersion, setNewVersion] = useState('');
   const [newVersionMessage, setNewVersionMessage] = useState('');
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
 
   useEffect(() => {
     loadVersions();
+    checkForUpdates();
     
     // Conectar ao Socket.IO apenas no cliente
     if (typeof window === 'undefined' || !io) return;
@@ -78,6 +93,25 @@ export default function PanelDeployManager() {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkForUpdates = async () => {
+    try {
+      setCheckingUpdates(true);
+      const response = await api.get('/admin/check-updates');
+      setUpdateInfo(response.data);
+      
+      if (response.data.hasUpdates) {
+        toast.success(`${response.data.updateInfo.commitsAhead} atualização(ões) disponível(is)!`, {
+          duration: 5000,
+          icon: '🚀'
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao verificar atualizações:', error);
+    } finally {
+      setCheckingUpdates(false);
     }
   };
 
@@ -184,6 +218,75 @@ export default function PanelDeployManager() {
 
   return (
     <div className="space-y-6">
+      {/* Banner de Atualização Disponível */}
+      {updateInfo?.hasUpdates && (
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white shadow-lg border border-blue-500">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <Rocket className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold">
+                  🎉 Nova Atualização Disponível!
+                </h3>
+              </div>
+              
+              <div className="ml-11 space-y-2">
+                <p className="text-blue-100">
+                  Há <span className="font-bold">{updateInfo.updateInfo?.commitsAhead} commit(s)</span> novos disponíveis no GitHub
+                </p>
+                
+                {updateInfo.updateInfo && (
+                  <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                    <p className="text-sm font-semibold mb-1">Última atualização:</p>
+                    <p className="text-sm text-blue-100">
+                      {updateInfo.updateInfo.latestCommitMessage}
+                    </p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-blue-200">
+                      <span>
+                        Commit: <code className="bg-white/20 px-2 py-0.5 rounded">{updateInfo.updateInfo.latestCommit}</code>
+                      </span>
+                      <span>
+                        {new Date(updateInfo.updateInfo.latestCommitDate).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-3 p-3 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
+                  <p className="text-sm text-blue-100">
+                    💡 <span className="font-semibold">Para aplicar esta atualização:</span>
+                  </p>
+                  <ol className="text-sm text-blue-100 mt-2 ml-4 space-y-1 list-decimal">
+                    <li>Clique em "Nova Versão" para criar uma versão com as atualizações</li>
+                    <li>Aguarde a construção da versão</li>
+                    <li>Clique em "Deploy" na nova versão criada</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 ml-4">
+              <button
+                onClick={checkForUpdates}
+                disabled={checkingUpdates}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors disabled:opacity-50"
+              >
+                {checkingUpdates ? (
+                  <span className="flex items-center gap-2">
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Verificando...
+                  </span>
+                ) : (
+                  'Verificar Novamente'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
@@ -196,13 +299,32 @@ export default function PanelDeployManager() {
               Versão atual: <span className="font-semibold text-blue-600">{currentVersion}</span>
             </p>
           </div>
-          <button
-            onClick={() => setShowNewVersionModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Nova Versão
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={checkForUpdates}
+              disabled={checkingUpdates}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+            >
+              {checkingUpdates ? (
+                <>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-5 h-5" />
+                  Verificar Atualizações
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setShowNewVersionModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Nova Versão
+            </button>
+          </div>
         </div>
       </div>
 

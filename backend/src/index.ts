@@ -24,8 +24,11 @@ import backupRoutes from './routes/backups';
 import logsRoutes from './routes/logs';
 import panelDeployRoutes from './routes/panel-deploy';
 import paymentRoutes from './routes/payments';
+import plansRoutes from './routes/plans';
+import monitoringRoutes from './routes/monitoring';
 import { UpdateCheckerService } from './services/UpdateCheckerService';
 import { panelDeployService } from './services/PanelDeployService';
+import SubscriptionRenewalService from './services/SubscriptionRenewalService';
 
 const app = express();
 
@@ -74,10 +77,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Rate limit geral - 100 requisições por 15 minutos
+// Rate limit geral - 1000 requisições por 15 minutos
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000,
   message: 'Muitas requisições, tente novamente mais tarde',
   standardHeaders: true,
   legacyHeaders: false,
@@ -91,10 +94,19 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
+// Rate limit para /auth/me - 100 requisições por minuto (mais permissivo)
+const authMeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: 'Muitas requisições de verificação de autenticação',
+  skip: (req) => req.method !== 'GET',
+});
+
 // Aplicar rate limiters
 app.use('/api/', generalLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/me', authMeLimiter);
 
 // Disponibilizar io para as rotas
 app.set('io', io);
@@ -113,6 +125,8 @@ app.use('/api/backups', backupRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/panel-deploy', panelDeployRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/plans', plansRoutes);
+app.use('/api/monitoring', monitoringRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -183,6 +197,9 @@ mongoose.connect(MONGODB_URI)
     
     // Passar io para o serviço de deploy do painel
     panelDeployService.setIO(io);
+    
+    // Iniciar serviço de renovação automática
+    SubscriptionRenewalService.start();
     
     server.listen(PORT, () => {
       console.log(`🚀 Deploy Manager rodando na porta ${PORT}`);

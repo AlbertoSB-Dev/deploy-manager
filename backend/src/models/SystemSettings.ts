@@ -7,6 +7,8 @@ export interface ISystemSettings extends Document {
   githubClientId?: string;
   githubClientSecret?: string;
   githubCallbackUrl?: string;
+  assasApiKey?: string;
+  assasWebhookToken?: string;
   updatedAt: Date;
 }
 
@@ -17,6 +19,8 @@ const SystemSettingsSchema = new Schema<ISystemSettings>({
   githubClientId: { type: String },
   githubClientSecret: { type: String },
   githubCallbackUrl: { type: String },
+  assasApiKey: { type: String },
+  assasWebhookToken: { type: String },
   updatedAt: { type: Date, default: Date.now }
 });
 

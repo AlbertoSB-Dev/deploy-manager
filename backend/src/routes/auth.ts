@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import axios from 'axios';
 import User from '../models/User';
 import { protect, AuthRequest } from '../middleware/auth';
+import EmailService from '../services/EmailService';
 
 const router = express.Router();
 
@@ -29,11 +30,22 @@ const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || '';
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || '';
 const GITHUB_CALLBACK_URL = process.env.GITHUB_CALLBACK_URL || 'http://localhost:3000/auth/github/callback';
 
+// Configuração OAuth Google
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:8001/api/auth/google/callback';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8000';
+
 // Debug - verificar configuração
 console.log('🔑 GitHub OAuth Config (Auth Routes):');
 console.log('  CLIENT_ID:', GITHUB_CLIENT_ID ? '✅ Configurado' : '❌ Não configurado');
 console.log('  CLIENT_SECRET:', GITHUB_CLIENT_SECRET ? '✅ Configurado' : '❌ Não configurado');
 console.log('  CALLBACK_URL:', GITHUB_CALLBACK_URL);
+
+console.log('🔑 Google OAuth Config:');
+console.log('  CLIENT_ID:', GOOGLE_CLIENT_ID ? '✅ Configurado' : '❌ Não configurado');
+console.log('  CLIENT_SECRET:', GOOGLE_CLIENT_SECRET ? '✅ Configurado' : '❌ Não configurado');
+console.log('  CALLBACK_URL:', GOOGLE_CALLBACK_URL);
 
 // Gerar JWT Token
 const generateToken = (id: string): string => {
@@ -90,6 +102,11 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Gerar token
     const token = generateToken(user._id.toString());
+
+    // Enviar email de boas-vindas (não bloquear resposta)
+    EmailService.sendTrialWelcome(user).catch(err => 
+      console.error('Erro ao enviar email de boas-vindas:', err)
+    );
 
     res.status(201).json({
       success: true,
@@ -186,7 +203,7 @@ router.post('/login', async (req: Request, res: Response) => {
 // @access  Private
 router.get('/me', protect, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.user?._id);
+    const user = await User.findById(req.user?._id).populate('subscription.planId');
 
     if (!user) {
       return res.status(404).json({
@@ -206,16 +223,21 @@ router.get('/me', protect, async (req: AuthRequest, res: Response) => {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
-        subscription: {
-          status: user.subscription?.status,
-          startDate: user.subscription?.startDate,
-          endDate: user.subscription?.endDate,
+        subscription: user.subscription ? {
+          planId: user.subscription.planId,
+          status: user.subscription.status,
+          startDate: user.subscription.startDate,
+          endDate: user.subscription.endDate,
+          serversCount: user.subscription.serversCount || 1,
+          trialServersUsed: user.subscription.trialServersUsed || 0,
+          assasCustomerId: user.subscription.assasCustomerId,
+          assasSubscriptionId: user.subscription.assasSubscriptionId,
           isTrialActive,
           isSubscriptionActive,
           daysRemaining: isTrialActive || isSubscriptionActive
-            ? Math.ceil((user.subscription?.endDate!.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+            ? Math.ceil((user.subscription.endDate!.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
             : 0,
-        },
+        } : undefined,
       },
     });
   } catch (error: any) {
@@ -579,6 +601,240 @@ router.put('/change-password', protect, async (req: AuthRequest, res: Response) 
       success: false,
       error: 'Erro ao alterar senha.',
     });
+  }
+});
+
+// @route   POST /api/auth/delete-account
+// @desc    Deletar conta do usuário
+// @access  Private
+router.post('/delete-account', protect, async (req: AuthRequest, res: Response) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Senha é obrigatória para deletar a conta.',
+      });
+    }
+
+    const user = await User.findById(req.user?._id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuário não encontrado.',
+      });
+    }
+
+    // Verificar senha
+    const isPasswordValid = await user.comparePassword(password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Senha incorreta.',
+      });
+    }
+
+    // Deletar todos os recursos do usuário
+    const Server = (await import('../models/Server')).Server;
+    const Project = (await import('../models/Project')).default;
+    const Database = (await import('../models/Database')).default;
+    const { WordPress } = await import('../models/WordPress');
+
+    await Promise.all([
+      Server.deleteMany({ userId: user._id }),
+      Project.deleteMany({ userId: user._id }),
+      Database.deleteMany({ userId: user._id }),
+      WordPress.deleteMany({ userId: user._id }),
+    ]);
+
+    // Deletar usuário
+    await User.findByIdAndDelete(user._id);
+
+    res.json({
+      success: true,
+      message: 'Conta deletada com sucesso.',
+    });
+  } catch (error: any) {
+    console.error('Erro ao deletar conta:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao deletar conta.',
+    });
+  }
+});
+
+// @route   POST /api/auth/verify-password
+// @desc    Verificar senha do usuário (para confirmações críticas)
+// @access  Private
+router.post('/verify-password', protect, async (req: AuthRequest, res: Response) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Senha é obrigatória',
+      });
+    }
+
+    const user = await User.findById(req.user?._id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuário não encontrado',
+      });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Senha incorreta',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Senha verificada com sucesso',
+    });
+  } catch (error: any) {
+    console.error('Erro ao verificar senha:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao verificar senha',
+    });
+  }
+});
+
+// @route   GET /api/auth/google
+// @desc    Iniciar OAuth Google para LOGIN
+// @access  Public
+router.get('/google', (req: Request, res: Response) => {
+  if (!GOOGLE_CLIENT_ID) {
+    return res.status(500).json({
+      success: false,
+      error: 'Google OAuth não configurado. Configure GOOGLE_CLIENT_ID no .env',
+    });
+  }
+
+  const scope = 'openid profile email';
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_CALLBACK_URL)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+  
+  console.log('🔗 Google Auth URL gerada:', googleAuthUrl);
+  
+  res.redirect(googleAuthUrl);
+});
+
+// @route   GET /api/auth/google/callback
+// @desc    Callback OAuth Google
+// @access  Public
+router.get('/google/callback', async (req: Request, res: Response) => {
+  try {
+    const { code, error } = req.query;
+
+    console.log('📥 Google Callback recebido');
+    console.log('  Code:', code ? `${String(code).substring(0, 10)}...` : 'VAZIO');
+    console.log('  Error:', error);
+
+    if (error) {
+      console.error('❌ Erro do Google:', error);
+      return res.redirect(`${FRONTEND_URL}/login?error=${error}`);
+    }
+
+    if (!code) {
+      return res.redirect(`${FRONTEND_URL}/login?error=no_code`);
+    }
+
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      console.error('❌ Credenciais do Google não configuradas!');
+      return res.redirect(`${FRONTEND_URL}/login?error=not_configured`);
+    }
+
+    console.log('🔄 Trocando código por access token...');
+
+    // Trocar código por access token
+    const tokenResponse = await axios.post(
+      'https://oauth2.googleapis.com/token',
+      {
+        code,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: GOOGLE_CALLBACK_URL,
+        grant_type: 'authorization_code',
+      },
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
+    );
+
+    const { access_token, id_token } = tokenResponse.data;
+
+    if (!access_token) {
+      console.error('❌ Access token não recebido');
+      return res.redirect(`${FRONTEND_URL}/login?error=no_token`);
+    }
+
+    console.log('✅ Access token obtido');
+
+    // Obter informações do usuário
+    const userInfoResponse = await axios.get(
+      'https://www.googleapis.com/oauth2/v2/userinfo',
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      }
+    );
+
+    const { email, name, picture } = userInfoResponse.data;
+
+    console.log('👤 Informações do usuário:', { email, name });
+
+    // Verificar se usuário já existe
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Criar novo usuário
+      console.log('📝 Criando novo usuário...');
+      user = await User.create({
+        name,
+        email,
+        password: crypto.randomBytes(32).toString('hex'), // Senha aleatória (não será usada)
+        avatar: picture,
+        googleId: userInfoResponse.data.id,
+        subscription: {
+          status: 'trial',
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 dias
+          trialServersUsed: 0,
+        },
+      });
+      console.log('✅ Usuário criado');
+    } else {
+      // Atualizar avatar se mudou
+      if (picture && user.avatar !== picture) {
+        user.avatar = picture;
+        await user.save();
+      }
+      console.log('✅ Usuário existente encontrado');
+    }
+
+    // Gerar token JWT
+    const token = generateToken(user._id.toString());
+
+    // Redirecionar para o frontend com o token
+    res.redirect(`${FRONTEND_URL}/auth/google/callback?token=${token}`);
+  } catch (error: any) {
+    console.error('❌ Erro no callback Google:', error.response?.data || error.message);
+    console.error('Stack:', error.stack);
+    res.redirect(`${FRONTEND_URL}/login?error=callback_failed`);
   }
 });
 

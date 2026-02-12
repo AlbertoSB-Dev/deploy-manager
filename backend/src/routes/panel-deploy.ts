@@ -5,9 +5,9 @@ import PanelVersion from '../models/PanelVersion';
 
 const router = Router();
 
-// Middleware para verificar se é admin
+// Middleware para verificar se é admin ou super_admin
 const isAdmin = (req: AuthRequest, res: any, next: any) => {
-  if (req.user?.role !== 'admin') {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
     return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar.' });
   }
   next();

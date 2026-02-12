@@ -1,6 +1,8 @@
 import express from 'express';
 import { WordPressService } from '../services/WordPressService';
 import { Server } from '../models/Server';
+import { protect, AuthRequest } from '../middleware/auth';
+import { checkSubscriptionActive, checkCanModify } from '../middleware/subscription';
 
 const router = express.Router();
 
@@ -8,7 +10,7 @@ const router = express.Router();
  * POST /api/wordpress/install
  * Instalar novo WordPress
  */
-router.post('/install', async (req, res) => {
+router.post('/install', protect, checkSubscriptionActive, async (req: AuthRequest, res) => {
   try {
     const { serverId, name, domain, wpAdminUser, wpAdminPassword, wpAdminEmail } = req.body;
 
@@ -18,7 +20,7 @@ router.post('/install', async (req, res) => {
     }
 
     // Verificar se servidor pertence ao usuário
-    const server = await Server.findOne({ _id: serverId, userId: req.user!.userId });
+    const server = await Server.findOne({ _id: serverId, userId: req.user?._id });
     if (!server) {
       return res.status(404).json({ error: 'Servidor não encontrado' });
     }
@@ -31,7 +33,7 @@ router.post('/install', async (req, res) => {
 
     // Instalar WordPress
     const wordpress = await WordPressService.install({
-      userId: req.user!.userId,
+      userId: req.user!._id.toString(),
       serverId,
       name,
       domain,
@@ -63,9 +65,9 @@ router.post('/install', async (req, res) => {
  * GET /api/wordpress
  * Listar WordPress do usuário
  */
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req: AuthRequest, res) => {
   try {
-    const wordpressList = await WordPressService.list(req.user!.userId);
+    const wordpressList = await WordPressService.list(req.user!._id.toString());
     
     // Não retornar senhas na listagem
     const sanitized = wordpressList.map(wp => ({
@@ -91,9 +93,9 @@ router.get('/', async (req, res) => {
  * GET /api/wordpress/:id
  * Obter WordPress por ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect, async (req: AuthRequest, res) => {
   try {
-    const wordpress = await WordPressService.getById(req.params.id, req.user!.userId);
+    const wordpress = await WordPressService.getById(req.params.id, req.user!._id.toString());
     
     if (!wordpress) {
       return res.status(404).json({ error: 'WordPress não encontrado' });
@@ -125,9 +127,9 @@ router.get('/:id', async (req, res) => {
  * POST /api/wordpress/:id/start
  * Iniciar WordPress
  */
-router.post('/:id/start', async (req, res) => {
+router.post('/:id/start', protect, async (req: AuthRequest, res) => {
   try {
-    await WordPressService.start(req.params.id, req.user!.userId);
+    await WordPressService.start(req.params.id, req.user!._id.toString());
     res.json({ success: true, message: 'WordPress iniciado' });
   } catch (error: any) {
     console.error('Erro ao iniciar WordPress:', error);
@@ -139,9 +141,9 @@ router.post('/:id/start', async (req, res) => {
  * POST /api/wordpress/:id/stop
  * Parar WordPress
  */
-router.post('/:id/stop', async (req, res) => {
+router.post('/:id/stop', protect, async (req: AuthRequest, res) => {
   try {
-    await WordPressService.stop(req.params.id, req.user!.userId);
+    await WordPressService.stop(req.params.id, req.user!._id.toString());
     res.json({ success: true, message: 'WordPress parado' });
   } catch (error: any) {
     console.error('Erro ao parar WordPress:', error);
@@ -153,9 +155,9 @@ router.post('/:id/stop', async (req, res) => {
  * POST /api/wordpress/:id/restart
  * Reiniciar WordPress
  */
-router.post('/:id/restart', async (req, res) => {
+router.post('/:id/restart', protect, async (req: AuthRequest, res) => {
   try {
-    await WordPressService.restart(req.params.id, req.user!.userId);
+    await WordPressService.restart(req.params.id, req.user!._id.toString());
     res.json({ success: true, message: 'WordPress reiniciado' });
   } catch (error: any) {
     console.error('Erro ao reiniciar WordPress:', error);
@@ -167,9 +169,9 @@ router.post('/:id/restart', async (req, res) => {
  * DELETE /api/wordpress/:id
  * Excluir WordPress
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
-    await WordPressService.delete(req.params.id, req.user!.userId);
+    await WordPressService.delete(req.params.id, req.user!._id.toString());
     res.json({ success: true, message: 'WordPress excluído' });
   } catch (error: any) {
     console.error('Erro ao excluir WordPress:', error);
@@ -181,10 +183,10 @@ router.delete('/:id', async (req, res) => {
  * GET /api/wordpress/:id/logs
  * Obter logs
  */
-router.get('/:id/logs', async (req, res) => {
+router.get('/:id/logs', protect, async (req: AuthRequest, res) => {
   try {
     const lines = parseInt(req.query.lines as string) || 100;
-    const logs = await WordPressService.getLogs(req.params.id, req.user!.userId, lines);
+    const logs = await WordPressService.getLogs(req.params.id, req.user!._id.toString(), lines);
     res.json(logs);
   } catch (error: any) {
     console.error('Erro ao obter logs:', error);
@@ -196,7 +198,7 @@ router.get('/:id/logs', async (req, res) => {
  * PUT /api/wordpress/:id/domain
  * Atualizar domínio
  */
-router.put('/:id/domain', async (req, res) => {
+router.put('/:id/domain', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
     const { domain } = req.body;
     
@@ -204,7 +206,7 @@ router.put('/:id/domain', async (req, res) => {
       return res.status(400).json({ error: 'Domínio é obrigatório' });
     }
 
-    await WordPressService.updateDomain(req.params.id, req.user!.userId, domain);
+    await WordPressService.updateDomain(req.params.id, req.user!._id.toString(), domain);
     res.json({ success: true, message: 'Domínio atualizado' });
   } catch (error: any) {
     console.error('Erro ao atualizar domínio:', error);
@@ -216,9 +218,9 @@ router.put('/:id/domain', async (req, res) => {
  * GET /api/wordpress/:id/status
  * Obter status dos containers
  */
-router.get('/:id/status', async (req, res) => {
+router.get('/:id/status', protect, async (req: AuthRequest, res) => {
   try {
-    const status = await WordPressService.getStatus(req.params.id, req.user!.userId);
+    const status = await WordPressService.getStatus(req.params.id, req.user!._id.toString());
     res.json(status);
   } catch (error: any) {
     console.error('Erro ao obter status:', error);

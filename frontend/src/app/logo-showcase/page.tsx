@@ -10,7 +10,7 @@ export default function LogoShowcase() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent mb-4 animate-gradient bg-[length:200%_auto]">
             Ark Deploy - Logo Showcase
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
@@ -184,7 +184,7 @@ export default function LogoShowcase() {
               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
                 <div className="flex items-center justify-between">
                   <ArkLogoModern size={36} showText={true} />
-                  <p className="text-xs text-gray-500">© 2026 Ark Deploy</p>
+                  <p className="text-xs text-gray-500">© 2026 <span className="font-semibold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">Ark Deploy</span></p>
                 </div>
               </div>
             </div>

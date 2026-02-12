@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Server as ServerIcon, Terminal, FolderOpen, Activity, RefreshCcw } from 'lucide-react';
+import { ChevronDown, ChevronRight, Server as ServerIcon, Terminal, FolderOpen, Activity, RefreshCcw, Trash2 } from 'lucide-react';
 import ServiceSection from './ServiceSection';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import TerminalSSH from './TerminalSSH';
 import FileManagerDashboard from './FileManagerDashboard';
 import { ServerMonitorModal } from './ServerMonitorModal';
+import DeleteServerModal from './DeleteServerModal';
 
 interface ServerCardProps {
   server: any;
@@ -34,6 +35,7 @@ export default function ServerCard({
   const [showMonitor, setShowMonitor] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const totalServices = projects.length + databases.length + wordpress.length;
   const isOnline = server.status === 'online';
@@ -151,6 +153,13 @@ export default function ServerCard({
             >
               <RefreshCcw className={`w-4 h-4 text-blue-600 dark:text-blue-400 ${updating ? 'animate-spin' : ''}`} />
             </button>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              title="Deletar Servidor"
+            >
+              <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+            </button>
             
             {/* Botão Mover para Grupo */}
             {allGroups.length > 0 && (
@@ -236,6 +245,17 @@ export default function ServerCard({
           serverId={server._id}
           serverName={server.name}
           onClose={() => setShowMonitor(false)}
+        />
+      )}
+
+      {showDeleteModal && (
+        <DeleteServerModal
+          server={server}
+          onClose={() => setShowDeleteModal(false)}
+          onDeleted={() => {
+            setShowDeleteModal(false);
+            onDataUpdate?.();
+          }}
         />
       )}
     </div>

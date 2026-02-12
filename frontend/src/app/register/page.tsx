@@ -4,7 +4,6 @@ export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -53,17 +52,19 @@ export default function RegisterPage() {
       document.cookie = `token=${response.data.data.token}; path=/; max-age=2592000`; // 30 dias
       
       toast.success('Conta criada com sucesso!');
-      router.push('/dashboard');
+      
+      // Usar window.location.href para forçar reload completo e inicializar AuthContext
+      window.location.href = '/dashboard';
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Erro ao criar conta');
-    } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignup = async () => {
-    toast('Cadastro com Google em breve!', { icon: 'ℹ️' });
-    // TODO: Implementar Google OAuth
+    // Redirecionar para o backend que iniciará o fluxo OAuth
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
+    window.location.href = `${apiUrl}/auth/google`;
   };
 
   const passwordStrength = () => {
@@ -80,8 +81,29 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link href="/" className="flex items-center justify-center mb-8">
-          <Image src="/logo.png" alt="Ark Deploy" width={60} height={60} />
+        <Link href="/" className="flex flex-col items-center justify-center mb-8 gap-3 group">
+          <div className="relative">
+            {/* Glow Effect */}
+            <div className="absolute inset-0 blur-xl opacity-40 group-hover:opacity-60 transition-opacity">
+              <img 
+                src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+                alt="Ark Deploy Glow" 
+                className="w-20 h-20"
+              />
+            </div>
+            {/* Logo Principal */}
+            <div className="relative">
+              <div className="absolute -inset-2 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full opacity-20 group-hover:opacity-30 blur-lg transition-opacity"></div>
+              <img 
+                src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+                alt="Ark Deploy" 
+                className="relative w-20 h-20 drop-shadow-xl transform group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+          </div>
+          <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent tracking-tight animate-gradient bg-[length:200%_auto]">
+            Ark Deploy
+          </span>
         </Link>
 
         {/* Card */}

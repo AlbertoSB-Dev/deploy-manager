@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import SystemSettings from '../models/SystemSettings';
 
 interface CreateSubscriptionParams {
   customerId: string;
@@ -47,24 +48,48 @@ interface AssasSubscription {
 }
 
 export class AssasService {
-  private client: AxiosInstance;
-  private apiKey: string;
+  private client: AxiosInstance | null = null;
+  private apiKey: string = '';
   private baseURL = 'https://api.assas.com.br/v3';
 
   constructor() {
-    this.apiKey = process.env.ASSAS_API_KEY || '';
+    this.initializeClient();
+  }
 
-    if (!this.apiKey) {
-      console.warn('⚠️  ASSAS_API_KEY não configurada no .env');
+  private async initializeClient() {
+    try {
+      const settings = await SystemSettings.findOne();
+      this.apiKey = settings?.assasApiKey || process.env.ASSAS_API_KEY || '';
+
+      if (!this.apiKey) {
+        console.warn('⚠️  ASSAS_API_KEY não configurada');
+      }
+
+      this.client = axios.create({
+        baseURL: this.baseURL,
+        headers: {
+          'access_token': this.apiKey,
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Erro ao inicializar AssasService:', error);
+      // Fallback para env
+      this.apiKey = process.env.ASSAS_API_KEY || '';
+      this.client = axios.create({
+        baseURL: this.baseURL,
+        headers: {
+          'access_token': this.apiKey,
+          'Content-Type': 'application/json',
+        },
+      });
     }
+  }
 
-    this.client = axios.create({
-      baseURL: this.baseURL,
-      headers: {
-        'access_token': this.apiKey,
-        'Content-Type': 'application/json',
-      },
-    });
+  private async ensureClient() {
+    if (!this.client) {
+      await this.initializeClient();
+    }
   }
 
   /**
@@ -72,6 +97,9 @@ export class AssasService {
    */
   async createCustomer(params: CreateCustomerParams): Promise<AssasCustomer> {
     try {
+      await this.ensureClient();
+      if (!this.client) throw new Error('Cliente Assas não inicializado');
+
       const response = await this.client.post('/customers', {
         name: params.name,
         email: params.email,
@@ -100,6 +128,9 @@ export class AssasService {
    */
   async getCustomer(customerId: string): Promise<AssasCustomer> {
     try {
+      await this.ensureClient();
+      if (!this.client) throw new Error('Cliente Assas não inicializado');
+
       const response = await this.client.get(`/customers/${customerId}`);
       return response.data;
     } catch (error: any) {
@@ -113,6 +144,9 @@ export class AssasService {
    */
   async createPlan(name: string, value: number, interval: 'MONTHLY' | 'YEARLY', description?: string) {
     try {
+      await this.ensureClient();
+      if (!this.client) throw new Error('Cliente Assas não inicializado');
+
       const response = await this.client.post('/plans', {
         name,
         value,
@@ -133,6 +167,9 @@ export class AssasService {
    */
   async createSubscription(params: CreateSubscriptionParams): Promise<AssasSubscription> {
     try {
+      await this.ensureClient();
+      if (!this.client) throw new Error('Cliente Assas não inicializado');
+
       const payload: any = {
         customerId: params.customerId,
         planId: params.planId,
@@ -159,6 +196,9 @@ export class AssasService {
    */
   async getSubscription(subscriptionId: string): Promise<AssasSubscription> {
     try {
+      await this.ensureClient();
+      if (!this.client) throw new Error('Cliente Assas não inicializado');
+
       const response = await this.client.get(`/subscriptions/${subscriptionId}`);
       return response.data;
     } catch (error: any) {
@@ -172,6 +212,9 @@ export class AssasService {
    */
   async cancelSubscription(subscriptionId: string): Promise<void> {
     try {
+      await this.ensureClient();
+      if (!this.client) throw new Error('Cliente Assas não inicializado');
+
       await this.client.delete(`/subscriptions/${subscriptionId}`);
       console.log('✅ Assinatura cancelada:', subscriptionId);
     } catch (error: any) {
@@ -185,6 +228,9 @@ export class AssasService {
    */
   async createInvoice(customerId: string, value: number, description: string, dueDate: string) {
     try {
+      await this.ensureClient();
+      if (!this.client) throw new Error('Cliente Assas não inicializado');
+
       const response = await this.client.post('/payments', {
         customer: customerId,
         billingType: 'BOLETO',
@@ -198,6 +244,29 @@ export class AssasService {
     } catch (error: any) {
       console.error('❌ Erro ao criar cobrança:', error.response?.data || error.message);
       throw new Error(`Erro ao criar cobrança: ${error.message}`);
+    }
+  }
+
+  /**
+   * Validar assinatura do webhook
+   */
+  validateWebhookSignature(
+    signature: string | undefined,
+    webhookToken: string | undefined,
+    payload: any
+  ): boolean {
+    if (!signature || !webhookToken) {
+      console.warn('⚠️ Webhook sem assinatura ou token não configurado');
+      return false;
+    }
+
+    try {
+      // Assas envia a assinatura no header 'asaas-access-token'
+      // Validar se o token corresponde ao configurado
+      return signature === webhookToken;
+    } catch (error) {
+      console.error('Erro ao validar assinatura do webhook:', error);
+      return false;
     }
   }
 

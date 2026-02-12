@@ -6,6 +6,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   avatar?: string;
+  googleId?: string;
   role: 'super_admin' | 'admin' | 'user';
   isActive: boolean;
   resetPasswordToken?: string;
@@ -16,6 +17,7 @@ export interface IUser extends Document {
     startDate?: Date;
     endDate?: Date;
     trialServersUsed?: number;
+    serversCount?: number;
     assasCustomerId?: string;      // ID do cliente no Assas
     assasSubscriptionId?: string;  // ID da assinatura no Assas
   };
@@ -48,6 +50,11 @@ const UserSchema = new Schema({
   },
   avatar: {
     type: String,
+  },
+  googleId: {
+    type: String,
+    sparse: true,
+    unique: true,
   },
   role: {
     type: String,
@@ -85,6 +92,10 @@ const UserSchema = new Schema({
     trialServersUsed: {
       type: Number,
       default: 0,
+    },
+    serversCount: {
+      type: Number,
+      default: 1,
     },
     assasCustomerId: {
       type: String,

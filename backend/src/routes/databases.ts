@@ -3,6 +3,7 @@ import { databaseService } from '../services/DatabaseService';
 import { adminPanelService } from '../services/AdminPanelService';
 import { dockerVersionService } from '../services/DockerVersionService';
 import { protect, AuthRequest } from '../middleware/auth';
+import { checkSubscriptionActive, checkCanModify } from '../middleware/subscription';
 
 const router = Router();
 
@@ -51,7 +52,7 @@ router.get('/:id', protect, async (req: AuthRequest, res) => {
 });
 
 // Criar novo banco de dados
-router.post('/', protect, async (req: AuthRequest, res) => {
+router.post('/', protect, checkSubscriptionActive, async (req: AuthRequest, res) => {
   try {
     const { name, displayName, type, version, serverId } = req.body;
     
@@ -134,7 +135,7 @@ router.get('/:id/logs', async (req, res) => {
 });
 
 // Deletar banco de dados
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
     await databaseService.deleteDatabase(req.params.id);
     res.json({ message: 'Banco de dados deletado com sucesso' });

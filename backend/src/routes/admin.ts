@@ -4,15 +4,22 @@ import Plan from '../models/Plan';
 import Project from '../models/Project';
 import { Server } from '../models/Server';
 import Database from '../models/Database';
-import { protect, admin, AuthRequest } from '../middleware/auth';
+import { protect, admin, superAdmin, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-// Todas as rotas requerem autenticação de admin
-router.use(protect, admin);
+// Rotas que requerem apenas admin (admin ou super_admin)
+const adminRouter = Router();
+adminRouter.use(protect, admin);
+
+// Rotas que requerem super_admin
+const superAdminRouter = Router();
+superAdminRouter.use(protect, superAdmin);
+
+// ===== ROTAS ADMIN (admin ou super_admin) =====
 
 // Dashboard - Estatísticas gerais
-router.get('/dashboard/stats', async (req: AuthRequest, res) => {
+adminRouter.get('/dashboard/stats', async (req: AuthRequest, res) => {
   try {
     console.log('📊 Buscando estatísticas do dashboard...');
     const now = new Date();
@@ -147,7 +154,7 @@ router.get('/dashboard/stats', async (req: AuthRequest, res) => {
 });
 
 // Listar todos os usuários
-router.get('/users', async (req: AuthRequest, res) => {
+adminRouter.get('/users', async (req: AuthRequest, res) => {
   try {
     const users = await User.find()
       .populate('subscription.planId')
@@ -161,7 +168,7 @@ router.get('/users', async (req: AuthRequest, res) => {
 });
 
 // Atualizar usuário (incluindo assinatura)
-router.put('/users/:id', async (req: AuthRequest, res) => {
+adminRouter.put('/users/:id', async (req: AuthRequest, res) => {
   try {
     const { name, email, role, isActive, subscription } = req.body;
     
@@ -182,7 +189,7 @@ router.put('/users/:id', async (req: AuthRequest, res) => {
 });
 
 // Deletar usuário
-router.delete('/users/:id', async (req: AuthRequest, res) => {
+adminRouter.delete('/users/:id', async (req: AuthRequest, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     
@@ -199,7 +206,7 @@ router.delete('/users/:id', async (req: AuthRequest, res) => {
 // ===== PLANOS =====
 
 // Listar todos os planos
-router.get('/plans', async (req: AuthRequest, res) => {
+adminRouter.get('/plans', async (req: AuthRequest, res) => {
   try {
     const plans = await Plan.find().sort({ price: 1 });
     res.json(plans);
@@ -209,7 +216,7 @@ router.get('/plans', async (req: AuthRequest, res) => {
 });
 
 // Criar plano
-router.post('/plans', async (req: AuthRequest, res) => {
+adminRouter.post('/plans', async (req: AuthRequest, res) => {
   try {
     const plan = new Plan(req.body);
     await plan.save();
@@ -220,7 +227,7 @@ router.post('/plans', async (req: AuthRequest, res) => {
 });
 
 // Atualizar plano
-router.put('/plans/:id', async (req: AuthRequest, res) => {
+adminRouter.put('/plans/:id', async (req: AuthRequest, res) => {
   try {
     const plan = await Plan.findByIdAndUpdate(
       req.params.id,
@@ -239,7 +246,7 @@ router.put('/plans/:id', async (req: AuthRequest, res) => {
 });
 
 // Deletar plano
-router.delete('/plans/:id', async (req: AuthRequest, res) => {
+adminRouter.delete('/plans/:id', async (req: AuthRequest, res) => {
   try {
     // Verificar se há usuários usando este plano
     const usersWithPlan = await User.countDocuments({
@@ -265,11 +272,11 @@ router.delete('/plans/:id', async (req: AuthRequest, res) => {
 });
 
 // ==========================================
-// CONFIGURAÇÕES DO SISTEMA
+// CONFIGURAÇÕES DO SISTEMA (SUPER ADMIN APENAS)
 // ==========================================
 
 // Obter configurações do sistema
-router.get('/settings', async (req: AuthRequest, res) => {
+superAdminRouter.get('/settings', async (req: AuthRequest, res) => {
   try {
     const SystemSettings = (await import('../models/SystemSettings')).default;
     
@@ -283,7 +290,9 @@ router.get('/settings', async (req: AuthRequest, res) => {
         frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8000',
         githubClientId: process.env.GITHUB_CLIENT_ID || '',
         githubClientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-        githubCallbackUrl: process.env.GITHUB_CALLBACK_URL || ''
+        githubCallbackUrl: process.env.GITHUB_CALLBACK_URL || '',
+        assasApiKey: process.env.ASSAS_API_KEY || '',
+        assasWebhookToken: process.env.ASSAS_WEBHOOK_TOKEN || '',
       });
       await settings.save();
     }
@@ -295,13 +304,13 @@ router.get('/settings', async (req: AuthRequest, res) => {
 });
 
 // Atualizar configurações do sistema
-router.put('/settings', async (req: AuthRequest, res) => {
+superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
   try {
     const SystemSettings = (await import('../models/SystemSettings')).default;
     const fs = await import('fs/promises');
     const path = await import('path');
     
-    const { serverIp, baseDomain, frontendUrl, githubClientId, githubClientSecret, githubCallbackUrl } = req.body;
+    const { serverIp, baseDomain, frontendUrl, githubClientId, githubClientSecret, githubCallbackUrl, assasApiKey, assasWebhookToken } = req.body;
     
     // Atualizar no banco de dados
     let settings = await SystemSettings.findOne();
@@ -313,7 +322,9 @@ router.put('/settings', async (req: AuthRequest, res) => {
         frontendUrl,
         githubClientId,
         githubClientSecret,
-        githubCallbackUrl
+        githubCallbackUrl,
+        assasApiKey,
+        assasWebhookToken,
       });
     } else {
       settings.serverIp = serverIp;
@@ -322,6 +333,8 @@ router.put('/settings', async (req: AuthRequest, res) => {
       settings.githubClientId = githubClientId;
       settings.githubClientSecret = githubClientSecret;
       settings.githubCallbackUrl = githubCallbackUrl;
+      settings.assasApiKey = assasApiKey;
+      settings.assasWebhookToken = assasWebhookToken;
       settings.updatedAt = new Date();
     }
     
@@ -338,6 +351,8 @@ router.put('/settings', async (req: AuthRequest, res) => {
     envContent = envContent.replace(/GITHUB_CLIENT_ID=.*/g, `GITHUB_CLIENT_ID=${githubClientId}`);
     envContent = envContent.replace(/GITHUB_CLIENT_SECRET=.*/g, `GITHUB_CLIENT_SECRET=${githubClientSecret}`);
     envContent = envContent.replace(/GITHUB_CALLBACK_URL=.*/g, `GITHUB_CALLBACK_URL=${githubCallbackUrl}`);
+    envContent = envContent.replace(/ASSAS_API_KEY=.*/g, `ASSAS_API_KEY=${assasApiKey}`);
+    envContent = envContent.replace(/ASSAS_WEBHOOK_TOKEN=.*/g, `ASSAS_WEBHOOK_TOKEN=${assasWebhookToken}`);
     
     await fs.writeFile(envPath, envContent);
     
@@ -348,6 +363,8 @@ router.put('/settings', async (req: AuthRequest, res) => {
     process.env.GITHUB_CLIENT_ID = githubClientId;
     process.env.GITHUB_CLIENT_SECRET = githubClientSecret;
     process.env.GITHUB_CALLBACK_URL = githubCallbackUrl;
+    process.env.ASSAS_API_KEY = assasApiKey;
+    process.env.ASSAS_WEBHOOK_TOKEN = assasWebhookToken;
     
     res.json({ message: 'Configurações atualizadas com sucesso', settings });
   } catch (error: any) {
@@ -356,7 +373,7 @@ router.put('/settings', async (req: AuthRequest, res) => {
 });
 
 // Reiniciar servidor
-router.post('/restart', async (req: AuthRequest, res) => {
+adminRouter.post('/restart', async (req: AuthRequest, res) => {
   try {
     res.json({ message: 'Servidor reiniciando...' });
     
@@ -374,7 +391,7 @@ router.post('/restart', async (req: AuthRequest, res) => {
 // ==========================================
 
 // Obter informações do sistema
-router.get('/system-info', async (req: AuthRequest, res) => {
+adminRouter.get('/system-info', async (req: AuthRequest, res) => {
   try {
     const { execSync } = await import('child_process');
     const fs = await import('fs/promises');
@@ -414,7 +431,7 @@ router.get('/system-info', async (req: AuthRequest, res) => {
 });
 
 // Verificar se há atualizações disponíveis no GitHub
-router.get('/check-updates', async (req: AuthRequest, res) => {
+adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
   try {
     const { execSync } = await import('child_process');
     
@@ -461,7 +478,7 @@ router.get('/check-updates', async (req: AuthRequest, res) => {
 });
 
 // Listar versões disponíveis (tags Git)
-router.get('/versions', async (req: AuthRequest, res) => {
+adminRouter.get('/versions', async (req: AuthRequest, res) => {
   try {
     const { execSync } = await import('child_process');
     
@@ -512,7 +529,7 @@ router.get('/versions', async (req: AuthRequest, res) => {
 });
 
 // Fazer rollback para uma versão específica
-router.post('/rollback', async (req: AuthRequest, res) => {
+adminRouter.post('/rollback', async (req: AuthRequest, res) => {
   try {
     const { exec } = await import('child_process');
     const { promisify } = await import('util');
@@ -567,7 +584,7 @@ router.post('/rollback', async (req: AuthRequest, res) => {
 });
 
 // Atualizar sistema do GitHub
-router.post('/update', async (req: AuthRequest, res) => {
+adminRouter.post('/update', async (req: AuthRequest, res) => {
   try {
     const { exec } = await import('child_process');
     const { promisify } = await import('util');
@@ -712,5 +729,9 @@ echo "✅ Atualização concluída!"
     });
   }
 });
+
+// Montar os routers
+router.use('/', adminRouter);
+router.use('/', superAdminRouter);
 
 export default router;

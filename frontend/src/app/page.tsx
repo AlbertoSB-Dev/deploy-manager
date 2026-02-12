@@ -57,9 +57,27 @@ export default function LandingPage() {
       <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Image src="/logo.png" alt="Ark Deploy" width={40} height={40} />
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">Ark Deploy</span>
+            <div className="flex items-center gap-2 group">
+              <div className="relative">
+                {/* Glow Effect */}
+                <div className="absolute inset-0 blur-lg opacity-30 group-hover:opacity-50 transition-opacity">
+                  <img 
+                    src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+                    alt="Ark Deploy Glow" 
+                    className="w-12 h-12"
+                  />
+                </div>
+                {/* Logo Principal */}
+                <div className="relative">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full opacity-20 group-hover:opacity-30 blur transition-opacity"></div>
+                  <img 
+                    src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+                    alt="Ark Deploy" 
+                    className="relative w-12 h-12 drop-shadow-lg transform group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent tracking-tight animate-gradient bg-[length:200%_auto]">Ark Deploy</span>
             </div>
             <div className="flex items-center space-x-4">
               <Link
@@ -86,17 +104,57 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-700 dark:text-blue-400 text-sm font-medium mb-8">
-          <Zap className="w-4 h-4" />
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        {/* Logo e Nome com Efeitos */}
+        <div className="flex flex-col items-center mb-12 relative">
+          {/* Glow Effect */}
+          <div className="absolute inset-0 blur-2xl opacity-50">
+            <img 
+              src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+              alt="Ark Deploy Glow" 
+              className="w-40 h-40 mx-auto"
+            />
+          </div>
+          
+          {/* Logo Principal */}
+          <div className="relative group">
+            <div className="absolute -inset-4 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full opacity-20 group-hover:opacity-30 blur-xl transition-opacity"></div>
+            <img 
+              src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+              alt="Ark Deploy" 
+              className="relative w-40 h-40 drop-shadow-2xl transform group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+          
+          {/* Nome com Efeito */}
+          <div className="relative mt-6">
+            <h2 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent tracking-tight animate-gradient bg-[length:200%_auto]">
+              Ark Deploy
+            </h2>
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+          </div>
+        </div>
+
+        {/* Badge com Animação */}
+        <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-full text-blue-700 dark:text-blue-400 text-sm font-semibold mb-10 border border-blue-200 dark:border-blue-800 shadow-lg hover:shadow-xl transition-all hover:scale-105">
+          <Zap className="w-4 h-4 animate-pulse" />
           Gerencie servidores VPS sem instalar painéis
         </div>
         
-        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
+        <h1 className="text-5xl md:text-7xl font-black text-gray-900 dark:text-white mb-6 leading-tight">
           Gerencie múltiplos servidores
           <br />
-          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            de um único lugar
+          <span className="relative inline-block">
+            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+              de um único lugar
+            </span>
+            <div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-full"></div>
           </span>
         </h1>
         
@@ -185,7 +243,7 @@ export default function LandingPage() {
           {/* Feature 3 */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-4">
-              <Image src="/logo.png" alt="Ark Deploy" width={24} height={24} />
+              <img src="https://i.postimg.cc/fRnWMY2V/logo.png" alt="Ark Deploy" width={24} height={24} />
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Deploy Remoto</h3>
             <p className="text-gray-600 dark:text-gray-400">
@@ -233,7 +291,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+              <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent mb-6 animate-gradient bg-[length:200%_auto]">
                 Por que Ark Deploy?
               </h2>
               <div className="space-y-4">
@@ -306,9 +364,27 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Image src="/logo.png" alt="Ark Deploy" width={36} height={36} />
-                <span className="text-lg font-bold text-gray-900 dark:text-white">Ark Deploy</span>
+              <div className="flex items-center gap-2 mb-4 group">
+                <div className="relative">
+                  {/* Glow Effect */}
+                  <div className="absolute inset-0 blur-md opacity-30 group-hover:opacity-50 transition-opacity">
+                    <img 
+                      src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+                      alt="Ark Deploy Glow" 
+                      className="w-10 h-10"
+                    />
+                  </div>
+                  {/* Logo Principal */}
+                  <div className="relative">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full opacity-20 group-hover:opacity-30 blur-sm transition-opacity"></div>
+                    <img 
+                      src="https://i.postimg.cc/fRnWMY2V/logo.png" 
+                      alt="Ark Deploy" 
+                      className="relative w-10 h-10 drop-shadow-md transform group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent tracking-tight animate-gradient bg-[length:200%_auto]">Ark Deploy</span>
               </div>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Painel centralizado para gerenciar servidores VPS via SSH.
@@ -339,7 +415,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 mt-8 pt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-            © 2026 Ark Deploy. Todos os direitos reservados.
+            © 2026 <span className="font-semibold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">Ark Deploy</span>. Todos os direitos reservados.
           </div>
         </div>
       </footer>

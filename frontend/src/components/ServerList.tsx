@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { AddServerModal } from './AddServerModal';
 import { ProvisioningModal } from './ProvisioningModal';
 import { ServerMonitorModal } from './ServerMonitorModal';
+import DeleteServerModal from './DeleteServerModal';
 import { useRouter } from 'next/navigation';
 
 interface ServerData {
@@ -43,6 +44,7 @@ export function ServerList() {
   const [provisioningServerId, setProvisioningServerId] = useState<string | null>(null);
   const [monitoringServerId, setMonitoringServerId] = useState<string | null>(null);
   const [monitoringServerName, setMonitoringServerName] = useState<string>('');
+  const [deletingServer, setDeletingServer] = useState<ServerData | null>(null);
 
   useEffect(() => {
     loadServers();
@@ -59,19 +61,8 @@ export function ServerList() {
     }
   };
 
-  const handleDelete = async (serverId: string, serverName: string) => {
-    if (!confirm(`Tem certeza que deseja deletar o servidor "${serverName}"?`)) {
-      return;
-    }
-
-    try {
-      toast.loading('Deletando servidor...', { id: 'delete' });
-      await api.delete(`/servers/${serverId}`);
-      toast.success('Servidor deletado!', { id: 'delete' });
-      loadServers();
-    } catch (error: any) {
-      toast.error('Erro ao deletar servidor', { id: 'delete' });
-    }
+  const handleDelete = async (server: ServerData) => {
+    setDeletingServer(server);
   };
 
   const handleTest = async (serverId: string) => {
@@ -192,15 +183,15 @@ export function ServerList() {
               key={server._id}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-3">
                     {getStatusIcon(server.status)}
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
                         {server.name}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                         {server.host}:{server.port} • {server.username}
                       </p>
                     </div>
@@ -235,7 +226,7 @@ export function ServerList() {
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => router.push(`/files/${server._id}`)}
                     className="p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition"
@@ -279,9 +270,9 @@ export function ServerList() {
                     <CheckCircle className="w-5 h-5" />
                   </button>
                   <button
-                    onClick={() => handleDelete(server._id, server.name)}
+                    onClick={() => handleDelete(server)}
                     className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
-                    title="Deletar"
+                    title="Deletar servidor"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
@@ -321,6 +312,14 @@ export function ServerList() {
             setMonitoringServerId(null);
             setMonitoringServerName('');
           }}
+        />
+      )}
+
+      {deletingServer && (
+        <DeleteServerModal
+          server={deletingServer}
+          onClose={() => setDeletingServer(null)}
+          onDeleted={loadServers}
         />
       )}
     </div>

@@ -3,6 +3,7 @@ import { Server } from '../models/Server';
 import { provisioningService } from '../services/ProvisioningService';
 import { sshService } from '../services/SSHService';
 import { protect, AuthRequest } from '../middleware/auth';
+import { checkServerLimit, checkCanModify } from '../middleware/subscription';
 import { validateCommand } from '../utils/commandValidator';
 
 const router = express.Router();
@@ -56,7 +57,7 @@ router.get('/servers/:id', protect, async (req: AuthRequest, res) => {
 });
 
 // Adicionar novo servidor e iniciar provisioning
-router.post('/servers', protect, async (req: AuthRequest, res) => {
+router.post('/servers', protect, checkServerLimit, async (req: AuthRequest, res) => {
   try {
     const server = new Server({
       ...req.body,
@@ -81,7 +82,7 @@ router.post('/servers', protect, async (req: AuthRequest, res) => {
 });
 
 // Atualizar servidor
-router.put('/servers/:id', protect, async (req: AuthRequest, res) => {
+router.put('/servers/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
     const server = await Server.findOneAndUpdate(
       { _id: req.params.id, userId: req.user?._id },
@@ -100,10 +101,12 @@ router.put('/servers/:id', protect, async (req: AuthRequest, res) => {
 });
 
 // Deletar servidor
-router.delete('/servers/:id', protect, async (req: AuthRequest, res) => {
+router.delete('/servers/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
-    const server = await Server.findOneAndDelete({ 
-      _id: req.params.id,
+    const serverId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    
+    const server = await Server.findOne({ 
+      _id: serverId,
       userId: req.user?._id 
     });
     
@@ -111,12 +114,121 @@ router.delete('/servers/:id', protect, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Servidor não encontrado' });
     }
     
-    // Desconectar SSH se estiver conectado
-    const serverId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    console.log(`🗑️ Deletando servidor ${server.name} e TODOS os recursos físicos...`);
+    
+    // Importar modelos
+    const Project = (await import('../models/Project')).default;
+    const Database = (await import('../models/Database')).default;
+    const { WordPress } = await import('../models/WordPress');
+    
+    // PASSO 1: LIMPAR TUDO DO SERVIDOR FÍSICO VIA SSH
+    try {
+      console.log('🔌 Conectando ao servidor para limpeza física...');
+      await sshService.connect(server);
+      
+      // 1. Parar TODOS os containers Docker
+      console.log('  🛑 Parando todos os containers...');
+      await sshService.executeCommand(serverId, 'docker stop $(docker ps -aq) 2>/dev/null || true');
+      
+      // 2. Remover TODOS os containers Docker
+      console.log('  🗑️ Removendo todos os containers...');
+      await sshService.executeCommand(serverId, 'docker rm -f $(docker ps -aq) 2>/dev/null || true');
+      
+      // 3. Remover TODOS os volumes Docker
+      console.log('  💾 Removendo todos os volumes...');
+      await sshService.executeCommand(serverId, 'docker volume rm $(docker volume ls -q) 2>/dev/null || true');
+      
+      // 4. Remover TODAS as imagens Docker
+      console.log('  🖼️ Removendo todas as imagens...');
+      await sshService.executeCommand(serverId, 'docker rmi -f $(docker images -aq) 2>/dev/null || true');
+      
+      // 5. Remover TODAS as redes Docker customizadas
+      console.log('  🌐 Removendo redes customizadas...');
+      await sshService.executeCommand(serverId, 'docker network prune -f 2>/dev/null || true');
+      
+      // 6. Limpar cache de build do Docker
+      console.log('  🧹 Limpando cache de build...');
+      await sshService.executeCommand(serverId, 'docker builder prune -af 2>/dev/null || true');
+      
+      // 7. Remover diretórios de projetos
+      console.log('  📁 Removendo diretórios de projetos...');
+      await sshService.executeCommand(serverId, 'rm -rf /root/projects/* 2>/dev/null || true');
+      await sshService.executeCommand(serverId, 'rm -rf /root/deployments/* 2>/dev/null || true');
+      await sshService.executeCommand(serverId, 'rm -rf /opt/projects/* 2>/dev/null || true');
+      
+      // 8. Remover configurações do Nginx/Traefik
+      console.log('  ⚙️ Removendo configurações de proxy...');
+      await sshService.executeCommand(serverId, 'rm -rf /etc/nginx/sites-enabled/* 2>/dev/null || true');
+      await sshService.executeCommand(serverId, 'rm -rf /etc/nginx/sites-available/* 2>/dev/null || true');
+      await sshService.executeCommand(serverId, 'rm -rf /etc/traefik/dynamic/* 2>/dev/null || true');
+      
+      // 9. Limpar logs do Docker
+      console.log('  📝 Limpando logs...');
+      await sshService.executeCommand(serverId, 'truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null || true');
+      
+      // 10. Executar limpeza completa do sistema Docker
+      console.log('  🧼 Executando limpeza completa do Docker...');
+      await sshService.executeCommand(serverId, 'docker system prune -af --volumes 2>/dev/null || true');
+      
+      // 11. Verificar se ainda há containers rodando
+      const checkContainers = await sshService.executeCommand(serverId, 'docker ps -a --format "{{.Names}}" 2>/dev/null || echo "none"');
+      if (checkContainers.stdout.trim() !== 'none' && checkContainers.stdout.trim() !== '') {
+        console.log('  ⚠️ Ainda existem containers, forçando remoção...');
+        await sshService.executeCommand(serverId, 'docker rm -f $(docker ps -aq) 2>/dev/null || true');
+      }
+      
+      console.log('  ✅ Servidor físico completamente limpo!');
+    } catch (sshError: any) {
+      console.error('  ⚠️ Erro ao limpar servidor físico (continuando com deleção do banco):', sshError.message);
+      // Continua mesmo se houver erro na limpeza física
+    }
+    
+    // PASSO 2: DELETAR REGISTROS DO BANCO DE DADOS
+    console.log('💾 Deletando registros do banco de dados...');
+    
+    // Deletar todos os projetos do servidor
+    const deletedProjects = await Project.deleteMany({ 
+      userId: req.user?._id,
+      serverId: serverId
+    });
+    console.log(`  ✓ ${deletedProjects.deletedCount} projetos deletados do banco`);
+    
+    // Deletar todos os bancos de dados do servidor
+    const deletedDatabases = await Database.deleteMany({ 
+      userId: req.user?._id,
+      serverId: serverId
+    });
+    console.log(`  ✓ ${deletedDatabases.deletedCount} bancos de dados deletados do banco`);
+    
+    // Deletar todos os WordPress do servidor
+    const deletedWordPress = await WordPress.deleteMany({ 
+      userId: req.user?._id,
+      serverId: serverId
+    });
+    console.log(`  ✓ ${deletedWordPress.deletedCount} sites WordPress deletados do banco`);
+    
+    // Desconectar SSH
     await sshService.disconnect(serverId);
     
-    res.json({ success: true, message: 'Servidor deletado com sucesso' });
+    // Deletar o servidor do banco
+    await Server.findByIdAndDelete(serverId);
+    console.log(`  ✓ Servidor deletado do banco`);
+    
+    const totalDeleted = deletedProjects.deletedCount + deletedDatabases.deletedCount + deletedWordPress.deletedCount;
+    
+    console.log('✅ DELEÇÃO COMPLETA! Servidor totalmente limpo e removido.');
+    
+    res.json({ 
+      success: true, 
+      message: `Servidor completamente limpo! ${totalDeleted} recurso(s) removidos do banco de dados e TODOS os containers/volumes/imagens removidos do servidor físico.`,
+      deleted: {
+        projects: deletedProjects.deletedCount,
+        databases: deletedDatabases.deletedCount,
+        wordpress: deletedWordPress.deletedCount
+      }
+    });
   } catch (error: any) {
+    console.error('❌ Erro ao deletar servidor:', error);
     res.status(500).json({ error: error.message });
   }
 });

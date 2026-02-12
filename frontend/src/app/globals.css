@@ -14,6 +14,10 @@
   .animate-scaleIn {
     animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
+
+  .animate-gradient {
+    animation: gradient 8s ease infinite;
+  }
 }
 
 @keyframes fadeIn {
@@ -33,5 +37,14 @@
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
 }
