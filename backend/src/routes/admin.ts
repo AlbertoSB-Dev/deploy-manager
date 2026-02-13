@@ -308,8 +308,6 @@ superAdminRouter.get('/settings', async (req: AuthRequest, res) => {
 superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
   try {
     const SystemSettings = (await import('../models/SystemSettings')).default;
-    const fs = await import('fs/promises');
-    const path = await import('path');
     
     const { serverIp, baseDomain, frontendUrl, githubClientId, githubClientSecret, githubCallbackUrl, assasApiKey, assasWebhookToken, assasEnvironment } = req.body;
     
@@ -343,28 +341,8 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
     
     await settings.save();
     
-    // Atualizar arquivo .env
-    const envPath = path.join(__dirname, '../../.env');
-    let envContent = await fs.readFile(envPath, 'utf-8');
-    
-    // Atualizar variáveis
-    envContent = envContent.replace(/SERVER_IP=.*/g, `SERVER_IP=${serverIp}`);
-    envContent = envContent.replace(/BASE_DOMAIN=.*/g, `BASE_DOMAIN=${baseDomain}`);
-    envContent = envContent.replace(/FRONTEND_URL=.*/g, `FRONTEND_URL=${frontendUrl}`);
-    envContent = envContent.replace(/GITHUB_CLIENT_ID=.*/g, `GITHUB_CLIENT_ID=${githubClientId}`);
-    envContent = envContent.replace(/GITHUB_CLIENT_SECRET=.*/g, `GITHUB_CLIENT_SECRET=${githubClientSecret}`);
-    envContent = envContent.replace(/GITHUB_CALLBACK_URL=.*/g, `GITHUB_CALLBACK_URL=${githubCallbackUrl}`);
-    envContent = envContent.replace(/ASSAS_API_KEY=.*/g, `ASSAS_API_KEY=${assasApiKey}`);
-    envContent = envContent.replace(/ASSAS_WEBHOOK_TOKEN=.*/g, `ASSAS_WEBHOOK_TOKEN=${assasWebhookToken}`);
-    
-    // Adicionar ou atualizar ASSAS_ENVIRONMENT
-    if (envContent.includes('ASSAS_ENVIRONMENT=')) {
-      envContent = envContent.replace(/ASSAS_ENVIRONMENT=.*/g, `ASSAS_ENVIRONMENT=${assasEnvironment || 'sandbox'}`);
-    } else {
-      envContent += `\nASSAS_ENVIRONMENT=${assasEnvironment || 'sandbox'}`;
-    }
-    
-    await fs.writeFile(envPath, envContent);
+    // Nota: Não atualizamos o arquivo .env em produção pois ele não está montado no container
+    // As configurações são salvas no banco de dados e aplicadas em memória
     
     // Atualizar variáveis de ambiente em memória
     process.env.SERVER_IP = serverIp;
