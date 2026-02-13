@@ -46,9 +46,40 @@ export class PanelDeployService {
 
   async getCurrentVersion() {
     try {
-      // Ler a versão atual do arquivo ou container
-      const { stdout } = await execAsync(`cd ${this.panelPath} && git describe --tags --always 2>/dev/null || echo "unknown"`);
-      return stdout.trim();
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      // Tentar package.json primeiro (mais confiável)
+      try {
+        const packageJsonPath = path.join(__dirname, '../../../package.json');
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+        if (packageJson.gitCommit && packageJson.gitCommit !== 'unknown') {
+          return packageJson.gitCommit.substring(0, 7);
+        }
+      } catch (e) {
+        console.log('⚠️ package.json não tem gitCommit');
+      }
+      
+      // Tentar git local
+      try {
+        const { stdout } = await execAsync('git rev-parse HEAD', { timeout: 5000 });
+        const commit = stdout.trim();
+        if (commit) {
+          return commit.substring(0, 7);
+        }
+      } catch (e) {
+        console.log('⚠️ Comando git falhou');
+      }
+      
+      // Tentar git describe como fallback
+      try {
+        const { stdout } = await execAsync(`cd ${this.panelPath} && git describe --tags --always 2>/dev/null || echo "unknown"`, { timeout: 5000 });
+        return stdout.trim();
+      } catch (error) {
+        console.error('Erro ao obter versão atual:', error);
+      }
+      
+      return 'unknown';
     } catch (error) {
       console.error('Erro ao obter versão atual:', error);
       return 'unknown';
