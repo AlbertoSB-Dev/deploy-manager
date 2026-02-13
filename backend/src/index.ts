@@ -61,21 +61,52 @@ const ALLOWED_ORIGINS = [
   process.env.FRONTEND_URL || 'http://localhost:8000'
 ].filter(Boolean);
 
+// Função para validar origem
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Permitir requisições sem origin (mobile apps, Postman, etc)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Permitir origens na lista
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Permitir qualquer subdomínio .sslip.io
+    if (origin.includes('.sslip.io')) {
+      return callback(null, true);
+    }
+    
+    // Permitir qualquer IP com porta 8000 ou 3000 (desenvolvimento)
+    if (origin.match(/^https?:\/\/\d+\.\d+\.\d+\.\d+:(8000|3000)$/)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization']
+};
+
 const io = new Server(server, {
   cors: {
-    origin: ALLOWED_ORIGINS,
+    origin: (origin, callback) => {
+      if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.includes('.sslip.io')) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true
   }
 });
 
 // Middleware
-app.use(cors({
-  origin: ALLOWED_ORIGINS,
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Authorization']
-}));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Rate limit geral - 1000 requisições por 15 minutos
