@@ -426,8 +426,11 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
     const fs = await import('fs');
     const path = await import('path');
     
+    console.log('🔍 Verificando atualizações...');
+    
     // Detectar se está em Docker
     const isDocker = fs.existsSync('/.dockerenv');
+    console.log(`📍 Ambiente: ${isDocker ? 'Docker' : 'Host'}`);
     
     // Em Docker, o repositório git está em /opt/ark-deploy no host
     // Precisamos executar comandos git no host, não no container
@@ -440,6 +443,8 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
         const repoOwner = 'AlbertoSB-Dev';
         const repoName = 'deploy-manager';
         const branch = 'main';
+        
+        console.log(`🌐 Consultando GitHub API: ${repoOwner}/${repoName}/${branch}`);
         
         const options = {
           hostname: 'api.github.com',
@@ -459,13 +464,15 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
               if (res.statusCode === 200) {
                 resolve(JSON.parse(data));
               } else {
-                reject(new Error(`GitHub API returned ${res.statusCode}`));
+                reject(new Error(`GitHub API returned ${res.statusCode}: ${data}`));
               }
             });
           });
           req.on('error', reject);
           req.end();
         });
+        
+        console.log(`✅ GitHub API respondeu: ${githubData.sha.substring(0, 7)}`);
         
         // Obter commit local do package.json ou variável de ambiente
         const packageJsonPath = path.join(__dirname, '../../../package.json');
@@ -474,12 +481,16 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
         try {
           const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
           localCommit = packageJson.gitCommit || 'unknown';
+          console.log(`📦 Commit local (package.json): ${localCommit === 'unknown' ? localCommit : localCommit.substring(0, 7)}`);
         } catch (e) {
-          console.log('Não foi possível ler commit local do package.json');
+          console.log('⚠️ Não foi possível ler commit local do package.json');
         }
         
         const remoteCommit = githubData.sha;
         const hasUpdates = localCommit !== remoteCommit && localCommit !== 'unknown';
+        
+        console.log(`🔄 Comparação: local=${localCommit === 'unknown' ? localCommit : localCommit.substring(0, 7)} vs remote=${remoteCommit.substring(0, 7)}`);
+        console.log(`${hasUpdates ? '🎉 HÁ ATUALIZAÇÕES!' : '✅ Sistema atualizado'}`);
         
         const updateInfo = hasUpdates ? {
           commitsAhead: 1, // Não podemos calcular exatamente sem git
@@ -493,11 +504,16 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
           localCommit: localCommit === 'unknown' ? localCommit : localCommit.substring(0, 7),
           remoteCommit: remoteCommit.substring(0, 7),
           updateInfo,
-          method: 'github-api'
+          method: 'github-api',
+          debug: {
+            isDocker,
+            localCommitFull: localCommit,
+            remoteCommitFull: remoteCommit
+          }
         });
         
-      } catch (apiError) {
-        console.error('Erro ao usar GitHub API:', apiError);
+      } catch (apiError: any) {
+        console.error('❌ Erro ao usar GitHub API:', apiError.message);
         // Fallback: sempre mostrar que pode haver atualizações
         return res.json({
           hasUpdates: true,
@@ -510,12 +526,15 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
             latestCommitDate: new Date()
           },
           method: 'fallback',
-          note: 'Não foi possível verificar automaticamente. Verifique manualmente no GitHub.'
+          note: 'Não foi possível verificar automaticamente. Verifique manualmente no GitHub.',
+          error: apiError.message
         });
       }
     }
     
     // Rodando no host - pode usar git normalmente
+    console.log('💻 Usando comandos git locais...');
+    
     // Buscar atualizações do remoto
     execSync('git fetch origin', { encoding: 'utf-8' });
     
@@ -527,6 +546,9 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
     
     // Verificar se há diferença
     const hasUpdates = localCommit !== remoteCommit;
+    
+    console.log(`🔄 Comparação: local=${localCommit.substring(0, 7)} vs remote=${remoteCommit.substring(0, 7)}`);
+    console.log(`${hasUpdates ? '🎉 HÁ ATUALIZAÇÕES!' : '✅ Sistema atualizado'}`);
     
     // Se houver atualizações, obter detalhes
     let updateInfo = null;
