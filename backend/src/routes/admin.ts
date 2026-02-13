@@ -432,146 +432,134 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
     const isDocker = fs.existsSync('/.dockerenv');
     console.log(`📍 Ambiente: ${isDocker ? 'Docker' : 'Host'}`);
     
-    // Em Docker, o repositório git está em /opt/ark-deploy no host
-    // Precisamos executar comandos git no host, não no container
-    if (isDocker) {
-      // Tentar verificar via API do GitHub
+    // Função para obter commit local
+    const getLocalCommit = (): string => {
+      // Tentar package.json primeiro (Docker)
       try {
-        const https = await import('https');
-        
-        // Obter informações do repositório via API do GitHub
-        const repoOwner = 'AlbertoSB-Dev';
-        const repoName = 'deploy-manager';
-        const branch = 'main';
-        
-        console.log(`🌐 Consultando GitHub API: ${repoOwner}/${repoName}/${branch}`);
-        
-        const options = {
-          hostname: 'api.github.com',
-          path: `/repos/${repoOwner}/${repoName}/commits/${branch}`,
-          method: 'GET',
-          headers: {
-            'User-Agent': 'Ark-Deploy',
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        };
-        
-        const githubData = await new Promise<any>((resolve, reject) => {
-          const req = https.request(options, (res) => {
-            let data = '';
-            res.on('data', (chunk) => data += chunk);
-            res.on('end', () => {
-              if (res.statusCode === 200) {
-                resolve(JSON.parse(data));
-              } else {
-                reject(new Error(`GitHub API returned ${res.statusCode}: ${data}`));
-              }
-            });
-          });
-          req.on('error', reject);
-          req.end();
-        });
-        
-        console.log(`✅ GitHub API respondeu: ${githubData.sha.substring(0, 7)}`);
-        
-        // Obter commit local do package.json ou variável de ambiente
         const packageJsonPath = path.join(__dirname, '../../../package.json');
-        let localCommit = 'unknown';
-        
-        try {
-          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-          localCommit = packageJson.gitCommit || 'unknown';
-          console.log(`📦 Commit local (package.json): ${localCommit === 'unknown' ? localCommit : localCommit.substring(0, 7)}`);
-        } catch (e) {
-          console.log('⚠️ Não foi possível ler commit local do package.json');
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+        if (packageJson.gitCommit && packageJson.gitCommit !== 'unknown') {
+          console.log(`📦 Commit local (package.json): ${packageJson.gitCommit.substring(0, 7)}`);
+          return packageJson.gitCommit;
         }
-        
-        const remoteCommit = githubData.sha;
-        const hasUpdates = localCommit !== remoteCommit && localCommit !== 'unknown';
-        
-        console.log(`🔄 Comparação: local=${localCommit === 'unknown' ? localCommit : localCommit.substring(0, 7)} vs remote=${remoteCommit.substring(0, 7)}`);
-        console.log(`${hasUpdates ? '🎉 HÁ ATUALIZAÇÕES!' : '✅ Sistema atualizado'}`);
-        
-        const updateInfo = hasUpdates ? {
-          commitsAhead: 1, // Não podemos calcular exatamente sem git
-          latestCommit: remoteCommit.substring(0, 7),
-          latestCommitMessage: githubData.commit.message,
-          latestCommitDate: githubData.commit.committer.date
-        } : null;
-        
-        return res.json({
-          hasUpdates,
-          localCommit: localCommit === 'unknown' ? localCommit : localCommit.substring(0, 7),
-          remoteCommit: remoteCommit.substring(0, 7),
-          updateInfo,
-          method: 'github-api',
-          debug: {
-            isDocker,
-            localCommitFull: localCommit,
-            remoteCommitFull: remoteCommit
-          }
+      } catch (e) {
+        console.log('⚠️ package.json não tem gitCommit');
+      }
+      
+      // Tentar git (desenvolvimento local)
+      try {
+        const commit = execSync('git rev-parse HEAD', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+        console.log(`💻 Commit local (git): ${commit.substring(0, 7)}`);
+        return commit;
+      } catch (e) {
+        console.log('⚠️ Comando git falhou');
+      }
+      
+      return 'unknown';
+    };
+    
+    // Função para obter dados do GitHub
+    const getGitHubData = async () => {
+      const https = await import('https');
+      
+      const repoOwner = 'AlbertoSB-Dev';
+      const repoName = 'deploy-manager';
+      const branch = 'main';
+      
+      console.log(`🌐 Consultando GitHub API: ${repoOwner}/${repoName}/${branch}`);
+      
+      const options = {
+        hostname: 'api.github.com',
+        path: `/repos/${repoOwner}/${repoName}/commits/${branch}`,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Ark-Deploy',
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      };
+      
+      return new Promise<any>((resolve, reject) => {
+        const req = https.request(options, (res) => {
+          let data = '';
+          res.on('data', (chunk) => data += chunk);
+          res.on('end', () => {
+            if (res.statusCode === 200) {
+              resolve(JSON.parse(data));
+            } else {
+              reject(new Error(`GitHub API returned ${res.statusCode}: ${data}`));
+            }
+          });
         });
-        
-      } catch (apiError: any) {
-        console.error('❌ Erro ao usar GitHub API:', apiError.message);
-        // Fallback: sempre mostrar que pode haver atualizações
+        req.on('error', reject);
+        req.setTimeout(5000, () => {
+          req.destroy();
+          reject(new Error('GitHub API timeout'));
+        });
+        req.end();
+      });
+    };
+    
+    // Obter commit local
+    const localCommit = getLocalCommit();
+    
+    // Obter dados do GitHub
+    try {
+      const githubData = await getGitHubData();
+      console.log(`✅ GitHub API respondeu: ${githubData.sha.substring(0, 7)}`);
+      
+      const remoteCommit = githubData.sha;
+      const hasUpdates = localCommit !== remoteCommit && localCommit !== 'unknown';
+      
+      console.log(`🔄 Comparação: local=${localCommit === 'unknown' ? localCommit : localCommit.substring(0, 7)} vs remote=${remoteCommit.substring(0, 7)}`);
+      console.log(`${hasUpdates ? '🎉 HÁ ATUALIZAÇÕES!' : '✅ Sistema atualizado'}`);
+      
+      const updateInfo = hasUpdates ? {
+        commitsAhead: 1,
+        latestCommit: remoteCommit.substring(0, 7),
+        latestCommitMessage: githubData.commit.message,
+        latestCommitDate: githubData.commit.committer.date
+      } : null;
+      
+      return res.json({
+        hasUpdates,
+        localCommit: localCommit === 'unknown' ? localCommit : localCommit.substring(0, 7),
+        remoteCommit: remoteCommit.substring(0, 7),
+        updateInfo,
+        method: isDocker ? 'github-api' : 'git-local',
+        debug: {
+          isDocker,
+          localCommitFull: localCommit,
+          remoteCommitFull: remoteCommit
+        }
+      });
+      
+    } catch (apiError: any) {
+      console.error('❌ Erro ao usar GitHub API:', apiError.message);
+      
+      // Se temos commit local, mostrar pelo menos isso
+      if (localCommit !== 'unknown') {
         return res.json({
-          hasUpdates: true,
-          localCommit: 'unknown',
+          hasUpdates: false,
+          localCommit: localCommit.substring(0, 7),
           remoteCommit: 'unknown',
-          updateInfo: {
-            commitsAhead: 1,
-            latestCommit: 'unknown',
-            latestCommitMessage: 'Verifique o GitHub para atualizações',
-            latestCommitDate: new Date()
-          },
-          method: 'fallback',
-          note: 'Não foi possível verificar automaticamente. Verifique manualmente no GitHub.',
+          updateInfo: null,
+          method: 'local-only',
+          note: 'Não foi possível verificar atualizações no GitHub',
           error: apiError.message
         });
       }
-    }
-    
-    // Rodando no host - pode usar git normalmente
-    console.log('💻 Usando comandos git locais...');
-    
-    // Buscar atualizações do remoto
-    execSync('git fetch origin', { encoding: 'utf-8' });
-    
-    // Obter commit local
-    const localCommit = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
-    
-    // Obter commit remoto
-    const remoteCommit = execSync('git rev-parse origin/main', { encoding: 'utf-8' }).trim();
-    
-    // Verificar se há diferença
-    const hasUpdates = localCommit !== remoteCommit;
-    
-    console.log(`🔄 Comparação: local=${localCommit.substring(0, 7)} vs remote=${remoteCommit.substring(0, 7)}`);
-    console.log(`${hasUpdates ? '🎉 HÁ ATUALIZAÇÕES!' : '✅ Sistema atualizado'}`);
-    
-    // Se houver atualizações, obter detalhes
-    let updateInfo = null;
-    if (hasUpdates) {
-      const commitCount = execSync(`git rev-list --count ${localCommit}..${remoteCommit}`, { encoding: 'utf-8' }).trim();
-      const latestCommitMsg = execSync('git log origin/main -1 --pretty=%B', { encoding: 'utf-8' }).trim();
-      const latestCommitDate = execSync('git log origin/main -1 --format=%cd --date=iso', { encoding: 'utf-8' }).trim();
       
-      updateInfo = {
-        commitsAhead: parseInt(commitCount),
-        latestCommit: remoteCommit.substring(0, 7),
-        latestCommitMessage: latestCommitMsg,
-        latestCommitDate: new Date(latestCommitDate)
-      };
+      // Fallback completo
+      return res.json({
+        hasUpdates: false,
+        localCommit: 'unknown',
+        remoteCommit: 'unknown',
+        updateInfo: null,
+        method: 'fallback',
+        note: 'Não foi possível verificar versão. Verifique manualmente no GitHub.',
+        error: apiError.message
+      });
     }
-    
-    res.json({
-      hasUpdates,
-      localCommit: localCommit.substring(0, 7),
-      remoteCommit: remoteCommit.substring(0, 7),
-      updateInfo,
-      method: 'git'
-    });
   } catch (error: any) {
     console.error('❌ Erro ao verificar atualizações:', error);
     
@@ -586,7 +574,6 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
     });
   }
 });
-
 // Listar versões disponíveis (tags Git)
 adminRouter.get('/versions', async (req: AuthRequest, res) => {
   try {
