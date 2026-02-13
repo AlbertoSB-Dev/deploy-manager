@@ -2,6 +2,8 @@
 
 Painel centralizado para gerenciar servidores VPS via SSH. Configure, faça deploy e monitore múltiplos servidores sem instalar nada neles. Tudo automatizado.
 
+> **🎉 Última Atualização (13/02/2026):** Sistema de verificação automática de atualizações via GitHub API implementado! Agora o painel detecta automaticamente quando há novas versões disponíveis.
+
 ## ⚡ Instalação em 1 Comando
 
 ```bash
@@ -56,6 +58,25 @@ cd /opt/ark-deploy
 - ✅ **Domínios automáticos** - Sistema gera domínios de teste com sslip.io
 - ✅ **Sistema de Atualização** - Atualize o painel diretamente do GitHub
 - ✅ **Gerenciamento de Versões** - Controle de versão integrado
+- 🆕 **Detecção Automática de Updates** - Notificação quando há novas versões disponíveis
+
+## 🔄 Sistema de Atualizações
+
+O Ark Deploy agora detecta automaticamente quando há atualizações disponíveis no GitHub:
+
+- 🔍 **Verificação Automática** - A cada 5 minutos via GitHub API
+- 🎯 **Banner de Notificação** - Alerta visual quando há updates
+- 📊 **Detalhes Completos** - Veja commits, mensagens e datas
+- 🚀 **Deploy Facilitado** - Crie versão e faça deploy com poucos cliques
+- 🔙 **Rollback Seguro** - Volte para versões anteriores se necessário
+
+**Como usar:**
+1. Acesse: Admin > Deploy do Painel
+2. Clique em "Verificar Atualizações"
+3. Se houver updates, clique em "Nova Versão"
+4. Aguarde o build e faça deploy
+
+📖 **Documentação:** [ATUALIZACAO-SISTEMA.md](ATUALIZACAO-SISTEMA.md)
 
 ## 🏗️ Arquitetura
 
