@@ -19,6 +19,23 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        MONGO_PASSWORD: ${MONGO_PASSWORD:-changeme123}
+        JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+        ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-encryption-key-32-chars-min}
+        SERVER_IP: ${SERVER_IP:-localhost}
+        BASE_DOMAIN: ${BASE_DOMAIN:-sslip.io}
+        FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8000}
+        GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+        GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+        GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:8000/auth/github/callback}
+        ASSAS_API_KEY: ${ASSAS_API_KEY:-}
+        ASSAS_WEBHOOK_TOKEN: ${ASSAS_WEBHOOK_TOKEN:-}
+        ASSAS_ENVIRONMENT: ${ASSAS_ENVIRONMENT:-sandbox}
+        EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+        EMAIL_SERVICE: ${EMAIL_SERVICE:-gmail}
+        EMAIL_USER: ${EMAIL_USER:-}
+        EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
     container_name: ark-deploy-backend
     restart: unless-stopped
     environment:
@@ -52,6 +69,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8001/api}
     container_name: ark-deploy-frontend
     restart: unless-stopped
     environment:

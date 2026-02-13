@@ -2,9 +2,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# ARG para NEXT_PUBLIC_API_URL (build-time)
+ARG NEXT_PUBLIC_API_URL=http://localhost:8001/api
+
 # Variáveis de ambiente para build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 # Copiar package files
 COPY package*.json ./
@@ -15,6 +19,9 @@ RUN npm ci --include=dev
 # Copiar código fonte
 COPY . .
 
+# Criar arquivo .env.local com NEXT_PUBLIC_API_URL
+RUN echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" > .env.local
+
 # Build para produção
 RUN npm run build
 
@@ -23,8 +30,15 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# ARG para NEXT_PUBLIC_API_URL (precisa redeclarar)
+ARG NEXT_PUBLIC_API_URL=http://localhost:8001/api
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+# Criar arquivo .env.production no runtime
+RUN echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" > .env.production
 
 # Copiar apenas o necessário do builder
 COPY --from=builder /app/package*.json ./
