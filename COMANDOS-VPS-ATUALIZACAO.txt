@@ -2,7 +2,53 @@
 🚀 COMANDOS PARA ATUALIZAR NA VPS - ARK DEPLOY
 ================================================================================
 
-📋 PASSO A PASSO COMPLETO
+⚡ CORREÇÃO AUTOMÁTICA (RECOMENDADO)
+================================================================================
+
+ssh root@38.242.213.195
+cd /opt/ark-deploy
+git pull origin main
+chmod +x fix-env-vps.sh
+./fix-env-vps.sh
+
+# O script faz TUDO:
+# ✅ Verifica se .env existe na raiz
+# ✅ Copia variáveis de backend/.env e frontend/.env.local
+# ✅ Corrige NEXT_PUBLIC_API_URL automaticamente
+# ✅ Oferece fazer rebuild automaticamente
+
+
+================================================================================
+📚 ENTENDENDO A ESTRUTURA DE .env
+================================================================================
+
+COMO FUNCIONA NO DOCKER:
+
+  .env (RAIZ)                    ← Docker Compose lê AQUI
+    ↓
+  docker-compose.yml
+    ↓
+  Containers (backend/frontend)  ← Recebem variáveis daqui
+
+ARQUIVOS IGNORADOS PELO DOCKER:
+  backend/.env                   ← Apenas para dev local (npm run dev)
+  frontend/.env.local            ← Apenas para dev local (npm run dev)
+
+PROBLEMA COMUM:
+  ❌ Você edita backend/.env
+  ❌ Docker Compose NÃO vê essa mudança
+  ❌ Containers usam valores padrão ou antigos
+  ❌ Socket.IO conecta em localhost
+
+SOLUÇÃO:
+  ✅ Editar .env na RAIZ
+  ✅ Rebuild dos containers
+  ✅ Docker Compose passa valores corretos
+
+
+================================================================================
+📋 PASSO A PASSO MANUAL
+================================================================================
 
 1️⃣ CONECTAR NA VPS
 -------------------

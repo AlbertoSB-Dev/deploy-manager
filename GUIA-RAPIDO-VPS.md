@@ -1,6 +1,29 @@
 # 🚀 Guia Rápido - Atualização na VPS
 
-## 📋 Checklist Rápido
+## ⚡ Correção Automática (RECOMENDADO)
+
+```bash
+# 1. Conectar na VPS
+ssh root@38.242.213.195
+
+# 2. Ir para o diretório
+cd /opt/ark-deploy
+
+# 3. Atualizar código
+git pull origin main
+
+# 4. Executar correção automática
+chmod +x fix-env-vps.sh
+./fix-env-vps.sh
+
+# O script faz TUDO automaticamente:
+# - Verifica se .env existe na raiz
+# - Copia variáveis de backend/.env e frontend/.env.local
+# - Corrige NEXT_PUBLIC_API_URL automaticamente
+# - Oferece fazer rebuild automaticamente
+```
+
+## 📋 Checklist Manual (se preferir)
 
 ```bash
 # 1. Conectar na VPS
@@ -25,6 +48,28 @@ docker-compose logs -f
 ```
 
 ## 🔧 Problema: Socket.IO conectando em localhost
+
+### Como Funciona o Docker Compose
+
+```yaml
+# docker-compose.yml lê .env da RAIZ automaticamente
+frontend:
+  environment:
+    NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    # ↑ Pega do .env da RAIZ, NÃO de frontend/.env.local
+```
+
+**IMPORTANTE:**
+- ✅ Docker Compose lê `.env` da **RAIZ** do projeto
+- ❌ Docker Compose **IGNORA** `backend/.env` e `frontend/.env.local`
+- ❌ Esses arquivos são apenas para desenvolvimento local (sem Docker)
+
+### Por que está conectando em localhost?
+
+1. `.env` na raiz **não existe** ou não tem `NEXT_PUBLIC_API_URL`
+2. Docker Compose usa valor padrão: `http://localhost:8001/api`
+3. Frontend é buildado com esse valor errado
+4. Socket.IO tenta conectar em localhost
 
 ### Sintoma
 ```
