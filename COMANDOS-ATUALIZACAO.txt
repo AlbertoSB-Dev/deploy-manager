@@ -1,0 +1,60 @@
+═══════════════════════════════════════════════════════════════
+🔄 ATUALIZAR SISTEMA DE VERIFICAÇÃO DE UPDATES
+═══════════════════════════════════════════════════════════════
+
+Execute estes comandos na VPS para ativar o sistema de verificação
+de atualizações:
+
+# 1. Ir para o diretório
+cd /opt/ark-deploy
+
+# 2. Atualizar código do GitHub
+git pull origin main
+
+# 3. Parar containers
+docker-compose down
+
+# 4. Rebuild do backend (com novo Dockerfile que captura commit hash)
+docker-compose build --no-cache backend
+
+# 5. Iniciar containers
+docker-compose up -d
+
+# 6. Verificar logs
+docker-compose logs backend | grep -i "commit"
+
+# Deve mostrar algo como:
+# Git commit: d120e6c...
+
+═══════════════════════════════════════════════════════════════
+✅ TESTAR NO PAINEL
+═══════════════════════════════════════════════════════════════
+
+1. Acessar: http://painel.38.242.213.195.sslip.io/admin
+2. Ir em "Deploy do Painel"
+3. Clicar em "Verificar Atualizações"
+4. Deve mostrar:
+   - Banner azul se houver atualizações
+   - "Sistema já está atualizado" se não houver
+
+═══════════════════════════════════════════════════════════════
+🎯 COMO FUNCIONA AGORA
+═══════════════════════════════════════════════════════════════
+
+✅ Sistema detecta que está em Docker
+✅ Usa API do GitHub para verificar último commit
+✅ Compara com commit hash salvo no build
+✅ Mostra banner quando há atualizações
+✅ Não precisa de acesso git no container
+
+═══════════════════════════════════════════════════════════════
+📝 OBSERVAÇÕES
+═══════════════════════════════════════════════════════════════
+
+- Verificação automática a cada 5 minutos
+- Botão manual sempre disponível
+- Usa API pública do GitHub (60 req/hora)
+- Fallback inteligente se API falhar
+- Não faz deploy automático (segurança)
+
+═══════════════════════════════════════════════════════════════
