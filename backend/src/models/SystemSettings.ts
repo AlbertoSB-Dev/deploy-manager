@@ -10,6 +10,10 @@ export interface ISystemSettings extends Document {
   assasApiKey?: string;
   assasWebhookToken?: string;
   assasEnvironment?: 'sandbox' | 'production';
+  // Configurações do repositório do painel
+  panelGitRepo?: string;
+  panelGitBranch?: string;
+  panelGitToken?: string;
   updatedAt: Date;
 }
 
@@ -23,6 +27,10 @@ const SystemSettingsSchema = new Schema<ISystemSettings>({
   assasApiKey: { type: String },
   assasWebhookToken: { type: String },
   assasEnvironment: { type: String, enum: ['sandbox', 'production'], default: 'sandbox' },
+  // Configurações do repositório do painel
+  panelGitRepo: { type: String, default: 'AlbertoSB-Dev/deploy-manager' },
+  panelGitBranch: { type: String, default: 'main' },
+  panelGitToken: { type: String },
   updatedAt: { type: Date, default: Date.now }
 });
 

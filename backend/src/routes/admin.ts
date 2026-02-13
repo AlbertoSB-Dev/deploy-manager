@@ -294,6 +294,9 @@ superAdminRouter.get('/settings', async (req: AuthRequest, res) => {
         assasApiKey: process.env.ASSAS_API_KEY || '',
         assasWebhookToken: process.env.ASSAS_WEBHOOK_TOKEN || '',
         assasEnvironment: (process.env.ASSAS_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
+        panelGitRepo: process.env.PANEL_GIT_REPO || 'AlbertoSB-Dev/deploy-manager',
+        panelGitBranch: process.env.PANEL_GIT_BRANCH || 'main',
+        panelGitToken: process.env.PANEL_GIT_TOKEN || '',
       });
       await settings.save();
     }
@@ -309,7 +312,20 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
   try {
     const SystemSettings = (await import('../models/SystemSettings')).default;
     
-    const { serverIp, baseDomain, frontendUrl, githubClientId, githubClientSecret, githubCallbackUrl, assasApiKey, assasWebhookToken, assasEnvironment } = req.body;
+    const { 
+      serverIp, 
+      baseDomain, 
+      frontendUrl, 
+      githubClientId, 
+      githubClientSecret, 
+      githubCallbackUrl, 
+      assasApiKey, 
+      assasWebhookToken, 
+      assasEnvironment,
+      panelGitRepo,
+      panelGitBranch,
+      panelGitToken
+    } = req.body;
     
     // Atualizar no banco de dados
     let settings = await SystemSettings.findOne();
@@ -325,6 +341,9 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
         assasApiKey,
         assasWebhookToken,
         assasEnvironment: assasEnvironment || 'sandbox',
+        panelGitRepo: panelGitRepo || 'AlbertoSB-Dev/deploy-manager',
+        panelGitBranch: panelGitBranch || 'main',
+        panelGitToken,
       });
     } else {
       settings.serverIp = serverIp;
@@ -336,6 +355,9 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
       settings.assasApiKey = assasApiKey;
       settings.assasWebhookToken = assasWebhookToken;
       settings.assasEnvironment = assasEnvironment || 'sandbox';
+      settings.panelGitRepo = panelGitRepo || 'AlbertoSB-Dev/deploy-manager';
+      settings.panelGitBranch = panelGitBranch || 'main';
+      settings.panelGitToken = panelGitToken;
       settings.updatedAt = new Date();
     }
     
@@ -354,6 +376,9 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
     process.env.ASSAS_API_KEY = assasApiKey;
     process.env.ASSAS_WEBHOOK_TOKEN = assasWebhookToken;
     process.env.ASSAS_ENVIRONMENT = assasEnvironment || 'sandbox';
+    process.env.PANEL_GIT_REPO = panelGitRepo || 'AlbertoSB-Dev/deploy-manager';
+    process.env.PANEL_GIT_BRANCH = panelGitBranch || 'main';
+    process.env.PANEL_GIT_TOKEN = panelGitToken || '';
     
     res.json({ message: 'Configurações atualizadas com sucesso', settings });
   } catch (error: any) {
@@ -461,12 +486,19 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
     // Função para obter dados do GitHub
     const getGitHubData = async () => {
       const https = await import('https');
+      const SystemSettings = (await import('../models/SystemSettings')).default;
       
-      const repoOwner = 'AlbertoSB-Dev';
-      const repoName = 'deploy-manager';
-      const branch = 'main';
+      // Buscar configurações do banco de dados
+      const settings = await SystemSettings.findOne();
+      const repoOwner = settings?.panelGitRepo?.split('/')[0] || 'AlbertoSB-Dev';
+      const repoName = settings?.panelGitRepo?.split('/')[1] || 'deploy-manager';
+      const branch = settings?.panelGitBranch || 'main';
+      const token = settings?.panelGitToken;
       
       console.log(`🌐 Consultando GitHub API: ${repoOwner}/${repoName}/${branch}`);
+      if (token) {
+        console.log('🔐 Usando token de autenticação (repositório privado)');
+      }
       
       const options = {
         hostname: 'api.github.com',
@@ -474,7 +506,8 @@ adminRouter.get('/check-updates', async (req: AuthRequest, res) => {
         method: 'GET',
         headers: {
           'User-Agent': 'Ark-Deploy',
-          'Accept': 'application/vnd.github.v3+json'
+          'Accept': 'application/vnd.github.v3+json',
+          ...(token ? { 'Authorization': `token ${token}` } : {})
         }
       };
       

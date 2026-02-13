@@ -18,6 +18,7 @@ export default function AdminSettingsPage() {
     githubClientSecret: false,
     assasApiKey: false,
     assasWebhookToken: false,
+    panelGitToken: false,
   });
   const [settings, setSettings] = useState({
     serverIp: '',
@@ -29,6 +30,9 @@ export default function AdminSettingsPage() {
     assasApiKey: '',
     assasWebhookToken: '',
     assasEnvironment: 'sandbox' as 'sandbox' | 'production',
+    panelGitRepo: '',
+    panelGitBranch: '',
+    panelGitToken: '',
   });
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -49,6 +53,9 @@ export default function AdminSettingsPage() {
         assasApiKey: response.data.assasApiKey || '',
         assasWebhookToken: response.data.assasWebhookToken || '',
         assasEnvironment: response.data.assasEnvironment || 'sandbox',
+        panelGitRepo: response.data.panelGitRepo || 'AlbertoSB-Dev/deploy-manager',
+        panelGitBranch: response.data.panelGitBranch || 'main',
+        panelGitToken: response.data.panelGitToken || '',
       });
       setDataLoaded(true);
     } catch (error: any) {
@@ -239,6 +246,70 @@ export default function AdminSettingsPage() {
                   {showSecrets.assasWebhookToken ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Panel Repository Settings */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-xl">
+          <div className="flex items-center gap-3 mb-6">
+            <Server className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Repositório do Painel</h2>
+          </div>
+          <div className="space-y-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Repositório Privado:</strong> Configure o token de acesso para permitir que o sistema detecte atualizações e faça deploy automático.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Repositório (owner/repo)
+              </label>
+              <input 
+                type="text" 
+                value={settings.panelGitRepo} 
+                onChange={(e) => setSettings({ ...settings, panelGitRepo: e.target.value })}
+                placeholder="AlbertoSB-Dev/deploy-manager"
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Branch
+              </label>
+              <input 
+                type="text" 
+                value={settings.panelGitBranch} 
+                onChange={(e) => setSettings({ ...settings, panelGitBranch: e.target.value })}
+                placeholder="main"
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Personal Access Token
+              </label>
+              <div className="relative">
+                <input 
+                  type={showSecrets.panelGitToken ? 'text' : 'password'} 
+                  value={settings.panelGitToken}
+                  onChange={(e) => setSettings({ ...settings, panelGitToken: e.target.value })}
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white" 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => toggleSecretVisibility('panelGitToken')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                  {showSecrets.panelGitToken ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Crie um token em: GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+                <br />
+                Permissões necessárias: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">repo</code> (acesso completo ao repositório)
+              </p>
             </div>
           </div>
         </div>
