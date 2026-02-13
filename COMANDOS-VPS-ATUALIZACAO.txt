@@ -1,0 +1,161 @@
+================================================================================
+🚀 COMANDOS PARA ATUALIZAR NA VPS - ARK DEPLOY
+================================================================================
+
+📋 PASSO A PASSO COMPLETO
+
+1️⃣ CONECTAR NA VPS
+-------------------
+ssh root@38.242.213.195
+
+
+2️⃣ IR PARA O DIRETÓRIO
+------------------------
+cd /opt/ark-deploy
+
+
+3️⃣ ATUALIZAR CÓDIGO DO GITHUB
+-------------------------------
+git pull origin main
+
+
+4️⃣ VERIFICAR SE .env EXISTE NA RAIZ
+-------------------------------------
+ls -la .env
+
+# Se NÃO existir, criar:
+cp .env.production .env
+nano .env
+# Verificar se tem: NEXT_PUBLIC_API_URL=http://api.38.242.213.195.sslip.io/api
+# Salvar: Ctrl+O, Enter, Ctrl+X
+
+
+5️⃣ EXECUTAR SCRIPT DE VERIFICAÇÃO
+-----------------------------------
+chmod +x check-env.sh
+./check-env.sh
+
+# Este script mostra se está tudo configurado corretamente
+
+
+6️⃣ REBUILD COMPLETO (IMPORTANTE!)
+-----------------------------------
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+
+
+7️⃣ VERIFICAR LOGS
+------------------
+docker-compose logs -f
+
+# Pressione Ctrl+C para sair quando ver que está tudo OK
+
+
+8️⃣ TESTAR NO NAVEGADOR
+------------------------
+Abrir: http://painel.38.242.213.195.sslip.io
+Abrir Console (F12)
+Verificar se NÃO tem erro de "localhost:8001"
+
+
+================================================================================
+⚠️  IMPORTANTE - LEIA ISTO!
+================================================================================
+
+NEXT_PUBLIC_API_URL é uma variável BUILD-TIME do Next.js
+
+Isso significa:
+❌ Apenas reiniciar NÃO funciona
+❌ docker-compose restart frontend NÃO funciona
+✅ É necessário REBUILD completo do frontend
+✅ Use sempre --no-cache para garantir
+
+Por isso o comando correto é:
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+
+
+================================================================================
+🔍 VERIFICAR SE FUNCIONOU
+================================================================================
+
+# Ver se containers estão rodando
+docker-compose ps
+
+# Ver logs do backend
+docker-compose logs backend | tail -20
+
+# Ver logs do frontend
+docker-compose logs frontend | tail -20
+
+# Verificar se Socket.IO está correto (NÃO deve ter localhost)
+docker-compose logs frontend | grep -i "localhost"
+
+# Se aparecer "localhost:8001", o rebuild não funcionou
+# Repita o passo 6
+
+
+================================================================================
+🆘 SE ALGO DER ERRADO
+================================================================================
+
+# Parar tudo
+docker-compose down
+
+# Limpar cache
+docker system prune -a
+
+# Rebuild do zero
+docker-compose build --no-cache
+docker-compose up -d
+
+# Ver logs em tempo real
+docker-compose logs -f
+
+
+================================================================================
+📚 DOCUMENTAÇÃO COMPLETA
+================================================================================
+
+Criamos 3 novos arquivos de documentação:
+
+1. ENV-SETUP.md - Guia completo sobre variáveis de ambiente
+2. GUIA-RAPIDO-VPS.md - Guia rápido para VPS
+3. check-env.sh - Script de diagnóstico
+
+Para ler:
+cat ENV-SETUP.md
+cat GUIA-RAPIDO-VPS.md
+
+
+================================================================================
+✅ CHECKLIST FINAL
+================================================================================
+
+[ ] Código atualizado (git pull)
+[ ] Arquivo .env existe na raiz
+[ ] NEXT_PUBLIC_API_URL está correto no .env
+[ ] Rebuild completo foi feito (--no-cache)
+[ ] Containers estão rodando (docker-compose ps)
+[ ] Logs não mostram erros
+[ ] Navegador não mostra erro de localhost
+[ ] Socket.IO conecta corretamente
+
+
+================================================================================
+🎯 RESUMO DOS COMANDOS (COPIAR E COLAR)
+================================================================================
+
+cd /opt/ark-deploy
+git pull origin main
+chmod +x check-env.sh
+./check-env.sh
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+docker-compose logs -f
+
+
+================================================================================
