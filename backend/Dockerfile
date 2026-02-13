@@ -1,8 +1,8 @@
 # Stage 1: Builder
 FROM node:20-alpine AS builder
 
-# Instalar dependências do sistema
-RUN apk add --no-cache python3 make g++
+# Instalar dependências do sistema incluindo git
+RUN apk add --no-cache python3 make g++ git
 
 WORKDIR /app
 
@@ -14,6 +14,13 @@ RUN npm ci
 
 # Copiar código fonte
 COPY . .
+
+# Capturar commit hash e adicionar ao package.json
+RUN if [ -d .git ]; then \
+      COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "unknown"); \
+      echo "Git commit: $COMMIT_HASH"; \
+      node -e "const pkg = require('./package.json'); pkg.gitCommit = '$COMMIT_HASH'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2))"; \
+    fi
 
 # Build TypeScript (ignorando erros de tipo)
 RUN npm run build:prod || npx tsc --skipLibCheck --noEmit false || echo "Build com warnings, continuando..."
@@ -27,8 +34,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8001
 
-# Copiar package files
-COPY package*.json ./
+# Copiar package files (com gitCommit)
+COPY --from=builder /app/package*.json ./
 
 # Instalar apenas dependências de produção
 RUN npm ci --only=production
