@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # ARG para NEXT_PUBLIC_API_URL (build-time)
-ARG NEXT_PUBLIC_API_URL=http://localhost:8001/api
+ARG NEXT_PUBLIC_API_URL=http://api.38.242.213.195.sslip.io/api
 
 # Variáveis de ambiente para build
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -31,7 +31,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 # ARG para NEXT_PUBLIC_API_URL (precisa redeclarar)
-ARG NEXT_PUBLIC_API_URL=http://localhost:8001/api
+ARG NEXT_PUBLIC_API_URL=http://api.38.242.213.195.sslip.io/api
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
