@@ -59,7 +59,7 @@ const generateToken = (id: string): string => {
 // @access  Public
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, cpfCnpj } = req.body;
 
     // Validações
     if (!name || !email || !password) {
@@ -92,6 +92,7 @@ router.post('/register', async (req: Request, res: Response) => {
       name,
       email,
       password,
+      cpfCnpj,
       subscription: {
         status: 'trial',
         startDate: new Date(),
@@ -221,6 +222,7 @@ router.get('/me', protect, async (req: AuthRequest, res: Response) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        cpfCnpj: user.cpfCnpj,
         role: user.role,
         avatar: user.avatar,
         subscription: user.subscription ? {
@@ -330,7 +332,7 @@ router.post('/reset-password/:token', async (req: Request, res: Response) => {
     // Hash do token
     const hashedToken = crypto
       .createHash('sha256')
-      .update(token)
+      .update(String(token))
       .digest('hex');
 
     // Buscar usuário com token válido

@@ -8,6 +8,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  cpfCnpj?: string;
   role: string;
   avatar?: string;
   subscription?: {

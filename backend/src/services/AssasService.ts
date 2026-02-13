@@ -50,7 +50,8 @@ interface AssasSubscription {
 export class AssasService {
   private client: AxiosInstance | null = null;
   private apiKey: string = '';
-  private baseURL = 'https://api.assas.com.br/v3';
+  private environment: 'sandbox' | 'production' = 'sandbox';
+  private baseURL = 'https://sandbox.asaas.com/api/v3';
 
   constructor() {
     this.initializeClient();
@@ -60,10 +61,19 @@ export class AssasService {
     try {
       const settings = await SystemSettings.findOne();
       this.apiKey = settings?.assasApiKey || process.env.ASSAS_API_KEY || '';
+      this.environment = settings?.assasEnvironment || (process.env.ASSAS_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox';
+
+      // Definir URL baseada no ambiente
+      this.baseURL = this.environment === 'production' 
+        ? 'https://api.asaas.com/v3'
+        : 'https://sandbox.asaas.com/api/v3';
 
       if (!this.apiKey) {
         console.warn('⚠️  ASSAS_API_KEY não configurada');
       }
+
+      console.log(`🔧 Assas configurado em modo: ${this.environment.toUpperCase()}`);
+      console.log(`🌐 URL Base: ${this.baseURL}`);
 
       this.client = axios.create({
         baseURL: this.baseURL,
@@ -76,6 +86,11 @@ export class AssasService {
       console.error('Erro ao inicializar AssasService:', error);
       // Fallback para env
       this.apiKey = process.env.ASSAS_API_KEY || '';
+      this.environment = (process.env.ASSAS_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox';
+      this.baseURL = this.environment === 'production' 
+        ? 'https://api.asaas.com/v3'
+        : 'https://sandbox.asaas.com/api/v3';
+      
       this.client = axios.create({
         baseURL: this.baseURL,
         headers: {

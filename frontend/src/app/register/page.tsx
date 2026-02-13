@@ -19,6 +19,7 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
+    cpfCnpj: '',
     acceptTerms: false,
   });
 
@@ -42,6 +43,7 @@ export default function RegisterPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        cpfCnpj: formData.cpfCnpj.replace(/\D/g, ''), // Remover formatação antes de enviar
       });
       
       // Salvar token no localStorage
@@ -181,6 +183,54 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {/* CPF/CNPJ */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                CPF ou CNPJ
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  required
+                  value={formData.cpfCnpj}
+                  onChange={(e) => {
+                    // Remover caracteres não numéricos
+                    let value = e.target.value.replace(/\D/g, '');
+                    
+                    // Limitar a 14 dígitos
+                    value = value.slice(0, 14);
+                    
+                    // Aplicar máscara baseado no tamanho
+                    let formatted = value;
+                    if (value.length <= 11) {
+                      // Máscara de CPF: 000.000.000-00
+                      formatted = value
+                        .replace(/(\d{3})(\d)/, '$1.$2')
+                        .replace(/(\d{3})(\d)/, '$1.$2')
+                        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                    } else {
+                      // Máscara de CNPJ: 00.000.000/0000-00
+                      formatted = value
+                        .replace(/(\d{2})(\d)/, '$1.$2')
+                        .replace(/(\d{3})(\d)/, '$1.$2')
+                        .replace(/(\d{3})(\d)/, '$1/$2')
+                        .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+                    }
+                    
+                    setFormData({ ...formData, cpfCnpj: formatted });
+                  }}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {formData.cpfCnpj.replace(/\D/g, '').length <= 11 
+                  ? 'Digite seu CPF (11 dígitos)' 
+                  : 'Digite seu CNPJ (14 dígitos)'}
+              </p>
+            </div>
+
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -264,13 +314,13 @@ export default function RegisterPage() {
               />
               <label className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                 Eu aceito os{' '}
-                <Link href="/terms" className="text-blue-600 dark:text-blue-400 hover:underline">
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
                   Termos de Uso
-                </Link>{' '}
+                </a>{' '}
                 e a{' '}
-                <Link href="/privacy" className="text-blue-600 dark:text-blue-400 hover:underline">
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
                   Política de Privacidade
-                </Link>
+                </a>
               </label>
             </div>
 

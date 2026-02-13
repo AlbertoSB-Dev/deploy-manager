@@ -9,6 +9,7 @@ export interface ISystemSettings extends Document {
   githubCallbackUrl?: string;
   assasApiKey?: string;
   assasWebhookToken?: string;
+  assasEnvironment?: 'sandbox' | 'production';
   updatedAt: Date;
 }
 
@@ -21,6 +22,7 @@ const SystemSettingsSchema = new Schema<ISystemSettings>({
   githubCallbackUrl: { type: String },
   assasApiKey: { type: String },
   assasWebhookToken: { type: String },
+  assasEnvironment: { type: String, enum: ['sandbox', 'production'], default: 'sandbox' },
   updatedAt: { type: Date, default: Date.now }
 });
 

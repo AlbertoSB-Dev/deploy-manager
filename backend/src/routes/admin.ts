@@ -293,6 +293,7 @@ superAdminRouter.get('/settings', async (req: AuthRequest, res) => {
         githubCallbackUrl: process.env.GITHUB_CALLBACK_URL || '',
         assasApiKey: process.env.ASSAS_API_KEY || '',
         assasWebhookToken: process.env.ASSAS_WEBHOOK_TOKEN || '',
+        assasEnvironment: (process.env.ASSAS_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
       });
       await settings.save();
     }
@@ -310,7 +311,7 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
     const fs = await import('fs/promises');
     const path = await import('path');
     
-    const { serverIp, baseDomain, frontendUrl, githubClientId, githubClientSecret, githubCallbackUrl, assasApiKey, assasWebhookToken } = req.body;
+    const { serverIp, baseDomain, frontendUrl, githubClientId, githubClientSecret, githubCallbackUrl, assasApiKey, assasWebhookToken, assasEnvironment } = req.body;
     
     // Atualizar no banco de dados
     let settings = await SystemSettings.findOne();
@@ -325,6 +326,7 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
         githubCallbackUrl,
         assasApiKey,
         assasWebhookToken,
+        assasEnvironment: assasEnvironment || 'sandbox',
       });
     } else {
       settings.serverIp = serverIp;
@@ -335,6 +337,7 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
       settings.githubCallbackUrl = githubCallbackUrl;
       settings.assasApiKey = assasApiKey;
       settings.assasWebhookToken = assasWebhookToken;
+      settings.assasEnvironment = assasEnvironment || 'sandbox';
       settings.updatedAt = new Date();
     }
     
@@ -354,6 +357,13 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
     envContent = envContent.replace(/ASSAS_API_KEY=.*/g, `ASSAS_API_KEY=${assasApiKey}`);
     envContent = envContent.replace(/ASSAS_WEBHOOK_TOKEN=.*/g, `ASSAS_WEBHOOK_TOKEN=${assasWebhookToken}`);
     
+    // Adicionar ou atualizar ASSAS_ENVIRONMENT
+    if (envContent.includes('ASSAS_ENVIRONMENT=')) {
+      envContent = envContent.replace(/ASSAS_ENVIRONMENT=.*/g, `ASSAS_ENVIRONMENT=${assasEnvironment || 'sandbox'}`);
+    } else {
+      envContent += `\nASSAS_ENVIRONMENT=${assasEnvironment || 'sandbox'}`;
+    }
+    
     await fs.writeFile(envPath, envContent);
     
     // Atualizar variáveis de ambiente em memória
@@ -365,6 +375,7 @@ superAdminRouter.put('/settings', async (req: AuthRequest, res) => {
     process.env.GITHUB_CALLBACK_URL = githubCallbackUrl;
     process.env.ASSAS_API_KEY = assasApiKey;
     process.env.ASSAS_WEBHOOK_TOKEN = assasWebhookToken;
+    process.env.ASSAS_ENVIRONMENT = assasEnvironment || 'sandbox';
     
     res.json({ message: 'Configurações atualizadas com sucesso', settings });
   } catch (error: any) {

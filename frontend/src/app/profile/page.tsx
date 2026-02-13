@@ -360,6 +360,20 @@ export default function ProfilePage() {
                       <p className="font-medium text-gray-900 dark:text-white">{user.email}</p>
                     </div>
                   </div>
+                  {user.cpfCnpj && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                      <CreditCard className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">CPF/CNPJ</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {user.cpfCnpj.length <= 11 
+                            ? user.cpfCnpj.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+                            : user.cpfCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                     <Shield className="w-5 h-5 text-gray-400" />
                     <div>

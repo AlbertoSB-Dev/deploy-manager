@@ -76,10 +76,20 @@ router.post('/subscribe', protect, async (req: AuthRequest, res: Response) => {
 
     if (!assasCustomerId) {
       try {
+        // Usar CPF/CNPJ do usuário ou gerar um de teste válido
+        let cpfCnpj = user.cpfCnpj;
+        
+        if (!cpfCnpj) {
+          // Se o usuário não tem CPF/CNPJ cadastrado, usar um CPF de teste válido
+          // No Sandbox do Assas, podemos usar CPFs de teste válidos
+          cpfCnpj = '24971563792'; // CPF de teste válido para Sandbox
+          console.warn('⚠️  Usuário sem CPF/CNPJ cadastrado. Usando CPF de teste.');
+        }
+        
         const customer = await AssasService.createCustomer({
           name: user.name,
           email: user.email,
-          cpfCnpj: '00000000000000', // TODO: Pedir CPF/CNPJ do usuário
+          cpfCnpj: cpfCnpj,
         });
         assasCustomerId = customer.id;
 
@@ -94,9 +104,10 @@ router.post('/subscribe', protect, async (req: AuthRequest, res: Response) => {
         user.subscription.assasCustomerId = assasCustomerId;
         await user.save();
       } catch (error: any) {
+        console.error('❌ Erro ao criar cliente no Assas:', error);
         return res.status(400).json({
           success: false,
-          error: error.message,
+          error: `Erro ao criar cliente: ${error.message}`,
         });
       }
     }

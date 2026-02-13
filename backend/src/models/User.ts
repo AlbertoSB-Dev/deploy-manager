@@ -5,6 +5,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  cpfCnpj?: string;
   avatar?: string;
   googleId?: string;
   role: 'super_admin' | 'admin' | 'user';
@@ -48,6 +49,11 @@ const UserSchema = new Schema({
     required: [true, 'Senha é obrigatória'],
     minlength: [6, 'Senha deve ter no mínimo 6 caracteres'],
     select: false, // Não retorna senha por padrão
+  },
+  cpfCnpj: {
+    type: String,
+    trim: true,
+    sparse: true, // Permite múltiplos documentos sem este campo
   },
   avatar: {
     type: String,

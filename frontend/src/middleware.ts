@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Rotas públicas
-  const publicRoutes = ['/', '/login', '/register', '/forgot-password'];
+  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/terms', '/privacy'];
   const isPublicRoute = publicRoutes.includes(pathname) || 
                        pathname.startsWith('/reset-password') ||
                        pathname.startsWith('/auth/github');
