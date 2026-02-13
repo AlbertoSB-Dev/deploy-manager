@@ -20,7 +20,7 @@ const upload = multer({
 async function verifyServerOwnership(req: AuthRequest, res: any, next: any) {
   try {
     const server = await Server.findOne({
-      _id: req.params.serverId,
+      _id: (req.params.serverId as string),
       userId: req.user?._id,
     });
 
@@ -37,9 +37,9 @@ async function verifyServerOwnership(req: AuthRequest, res: any, next: any) {
 // Testar conexão SFTP
 router.get('/:serverId/test', protect, verifyServerOwnership, async (req: AuthRequest, res) => {
   try {
-    console.log(`[SFTP] Testando conexão com servidor ${req.params.serverId}`);
+    console.log(`[SFTP] Testando conexão com servidor ${(req.params.serverId as string)}`);
     
-    const server = await Server.findById(req.params.serverId);
+    const server = await Server.findById((req.params.serverId as string));
     if (!server) {
       return res.status(404).json({ error: 'Servidor não encontrado' });
     }
@@ -90,14 +90,14 @@ router.get('/:serverId/list', protect, verifyServerOwnership, async (req: AuthRe
   try {
     const { path: dirPath = '/' } = req.query;
     
-    console.log(`[SFTP] Listando diretório: ${dirPath} no servidor ${req.params.serverId}`);
+    console.log(`[SFTP] Listando diretório: ${dirPath} no servidor ${(req.params.serverId as string)}`);
     
     if (!SFTPService.validatePath(dirPath as string)) {
       console.log(`[SFTP] Caminho negado: ${dirPath}`);
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    const files = await SFTPService.listDirectory(req.params.serverId, dirPath as string);
+    const files = await SFTPService.listDirectory((req.params.serverId as string), dirPath as string);
     console.log(`[SFTP] ${files.length} arquivos encontrados`);
     res.json(files);
   } catch (error: any) {
@@ -119,7 +119,7 @@ router.get('/:serverId/info', protect, verifyServerOwnership, async (req: AuthRe
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    const info = await SFTPService.getFileInfo(req.params.serverId, filePath as string);
+    const info = await SFTPService.getFileInfo((req.params.serverId as string), filePath as string);
     res.json(info);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -139,7 +139,7 @@ router.get('/:serverId/read', protect, verifyServerOwnership, async (req: AuthRe
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    const content = await SFTPService.readFile(req.params.serverId, filePath as string);
+    const content = await SFTPService.readFile((req.params.serverId as string), filePath as string);
     
     // Detectar tipo MIME
     const mimeType = SFTPService.getMimeType(filePath as string);
@@ -164,7 +164,7 @@ router.post('/:serverId/write', protect, verifyServerOwnership, async (req: Auth
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    await SFTPService.writeFile(req.params.serverId, filePath, content);
+    await SFTPService.writeFile((req.params.serverId as string), filePath, content);
     res.json({ success: true, message: 'Arquivo salvo com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -184,7 +184,7 @@ router.post('/:serverId/mkdir', protect, verifyServerOwnership, async (req: Auth
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    await SFTPService.createDirectory(req.params.serverId, dirPath, recursive);
+    await SFTPService.createDirectory((req.params.serverId as string), dirPath, recursive);
     res.json({ success: true, message: 'Diretório criado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -204,7 +204,7 @@ router.delete('/:serverId/delete', protect, verifyServerOwnership, async (req: A
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    await SFTPService.delete(req.params.serverId, targetPath, recursive);
+    await SFTPService.delete((req.params.serverId as string), targetPath, recursive);
     res.json({ success: true, message: 'Excluído com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -224,7 +224,7 @@ router.put('/:serverId/rename', protect, verifyServerOwnership, async (req: Auth
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    await SFTPService.rename(req.params.serverId, oldPath, newPath);
+    await SFTPService.rename((req.params.serverId as string), oldPath, newPath);
     res.json({ success: true, message: 'Renomeado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -244,7 +244,7 @@ router.put('/:serverId/move', protect, verifyServerOwnership, async (req: AuthRe
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    await SFTPService.move(req.params.serverId, sourcePath, destPath);
+    await SFTPService.move((req.params.serverId as string), sourcePath, destPath);
     res.json({ success: true, message: 'Movido com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -264,7 +264,7 @@ router.post('/:serverId/copy', protect, verifyServerOwnership, async (req: AuthR
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    await SFTPService.copy(req.params.serverId, sourcePath, destPath);
+    await SFTPService.copy((req.params.serverId as string), sourcePath, destPath);
     res.json({ success: true, message: 'Copiado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -275,7 +275,7 @@ router.post('/:serverId/copy', protect, verifyServerOwnership, async (req: AuthR
 router.post('/:serverId/upload', protect, verifyServerOwnership, upload.single('file'), async (req: AuthRequest, res) => {
   try {
     console.log('[SFTP Upload] Iniciando upload...');
-    console.log('[SFTP Upload] Servidor:', req.params.serverId);
+    console.log('[SFTP Upload] Servidor:', (req.params.serverId as string));
     console.log('[SFTP Upload] Body:', req.body);
     console.log('[SFTP Upload] File:', req.file ? `${req.file.originalname} (${req.file.size} bytes)` : 'nenhum');
     
@@ -297,7 +297,7 @@ router.post('/:serverId/upload', protect, verifyServerOwnership, upload.single('
     }
 
     console.log('[SFTP Upload] Fazendo upload para:', remotePath);
-    await SFTPService.uploadFile(req.params.serverId, req.file.buffer, remotePath);
+    await SFTPService.uploadFile((req.params.serverId as string), req.file.buffer, remotePath);
     console.log('[SFTP Upload] Upload concluído com sucesso');
     
     res.json({ success: true, message: 'Upload concluído com sucesso' });
@@ -320,7 +320,7 @@ router.get('/:serverId/download', protect, verifyServerOwnership, async (req: Au
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    const buffer = await SFTPService.downloadFile(req.params.serverId, remotePath as string);
+    const buffer = await SFTPService.downloadFile((req.params.serverId as string), remotePath as string);
     const filename = path.basename(remotePath as string);
     
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -350,7 +350,7 @@ router.post('/:serverId/compress', protect, verifyServerOwnership, async (req: A
       return res.status(403).json({ error: 'Acesso negado ao caminho de saída' });
     }
 
-    await SFTPService.compress(req.params.serverId, paths, outputPath);
+    await SFTPService.compress((req.params.serverId as string), paths, outputPath);
     res.json({ success: true, message: 'Arquivos comprimidos com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -370,7 +370,7 @@ router.post('/:serverId/extract', protect, verifyServerOwnership, async (req: Au
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    await SFTPService.extract(req.params.serverId, archivePath, destination);
+    await SFTPService.extract((req.params.serverId as string), archivePath, destination);
     res.json({ success: true, message: 'Arquivo extraído com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -390,7 +390,7 @@ router.put('/:serverId/chmod', protect, verifyServerOwnership, async (req: AuthR
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    await SFTPService.chmod(req.params.serverId, targetPath, mode, recursive);
+    await SFTPService.chmod((req.params.serverId as string), targetPath, mode, recursive);
     res.json({ success: true, message: 'Permissões alteradas com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -410,7 +410,7 @@ router.put('/:serverId/chown', protect, verifyServerOwnership, async (req: AuthR
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    await SFTPService.chown(req.params.serverId, targetPath, owner, group, recursive);
+    await SFTPService.chown((req.params.serverId as string), targetPath, owner, group, recursive);
     res.json({ success: true, message: 'Proprietário alterado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -430,7 +430,7 @@ router.get('/:serverId/size', protect, verifyServerOwnership, async (req: AuthRe
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    const size = await SFTPService.getDirectorySize(req.params.serverId, dirPath as string);
+    const size = await SFTPService.getDirectorySize((req.params.serverId as string), dirPath as string);
     res.json({ size });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -442,7 +442,7 @@ router.get('/:serverId/disk-usage', protect, verifyServerOwnership, async (req: 
   try {
     const { path: targetPath = '/' } = req.query;
 
-    const usage = await SFTPService.getDiskUsage(req.params.serverId, targetPath as string);
+    const usage = await SFTPService.getDiskUsage((req.params.serverId as string), targetPath as string);
     res.json(usage);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -462,7 +462,7 @@ router.get('/:serverId/search', protect, verifyServerOwnership, async (req: Auth
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    const files = await SFTPService.searchFiles(req.params.serverId, searchPath as string, query as string);
+    const files = await SFTPService.searchFiles((req.params.serverId as string), searchPath as string, query as string);
     res.json(files);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -482,7 +482,7 @@ router.get('/:serverId/tail', protect, verifyServerOwnership, async (req: AuthRe
       return res.status(403).json({ error: 'Acesso negado a este caminho' });
     }
 
-    const content = await SFTPService.tailFile(req.params.serverId, filePath as string, parseInt(lines as string));
+    const content = await SFTPService.tailFile((req.params.serverId as string), filePath as string, parseInt(lines as string));
     res.json({ content });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

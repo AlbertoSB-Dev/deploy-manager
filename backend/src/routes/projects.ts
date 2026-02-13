@@ -28,7 +28,7 @@ router.get('/', protect, async (req: AuthRequest, res) => {
 router.get('/:id', protect, async (req: AuthRequest, res) => {
   try {
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     if (!project) return res.status(404).json({ error: 'Projeto não encontrado' });
@@ -150,7 +150,7 @@ router.put('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
     
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -171,7 +171,7 @@ router.put('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
     
     // Atualizar projeto
     const updatedProject = await Project.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user?._id },
+      { _id: (req.params.id as string), userId: req.user?._id },
       { $set: updateData },
       { new: true }
     );
@@ -187,7 +187,7 @@ router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => 
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -195,7 +195,7 @@ router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => 
       return res.status(404).json({ error: 'Projeto não encontrado' });
     }
     
-    await deployService.deleteProject(req.params.id);
+    await deployService.deleteProject((req.params.id as string));
     res.json({ message: 'Projeto deletado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -207,7 +207,7 @@ router.post('/:id/deploy', protect, checkSubscriptionActive, async (req: AuthReq
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -216,7 +216,7 @@ router.post('/:id/deploy', protect, checkSubscriptionActive, async (req: AuthReq
     }
     
     const { version, deployedBy } = req.body;
-    const result = await deployService.deployProject(req.params.id, version, deployedBy || 'manual');
+    const result = await deployService.deployProject((req.params.id as string), version, deployedBy || 'manual');
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -228,7 +228,7 @@ router.post('/:id/rollback/fast', protect, async (req: AuthRequest, res) => {
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -237,7 +237,7 @@ router.post('/:id/rollback/fast', protect, async (req: AuthRequest, res) => {
     }
     
     const { deployedBy } = req.body;
-    const result = await deployService.rollback(req.params.id, undefined, deployedBy || 'manual');
+    const result = await deployService.rollback((req.params.id as string), undefined, deployedBy || 'manual');
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -249,7 +249,7 @@ router.post('/:id/rollback', protect, async (req: AuthRequest, res) => {
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -258,7 +258,7 @@ router.post('/:id/rollback', protect, async (req: AuthRequest, res) => {
     }
     
     const { deploymentIndex, deployedBy } = req.body;
-    const result = await deployService.rollback(req.params.id, deploymentIndex, deployedBy || 'manual');
+    const result = await deployService.rollback((req.params.id as string), deploymentIndex, deployedBy || 'manual');
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -270,7 +270,7 @@ router.get('/:id/check-updates', protect, async (req: AuthRequest, res) => {
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -278,7 +278,7 @@ router.get('/:id/check-updates', protect, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Projeto não encontrado' });
     }
     
-    const result = await updateChecker.checkForUpdates(req.params.id);
+    const result = await updateChecker.checkForUpdates((req.params.id as string));
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -289,7 +289,7 @@ router.get('/:id/check-updates', protect, async (req: AuthRequest, res) => {
 router.get('/:id/versions', protect, async (req: AuthRequest, res) => {
   try {
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -312,7 +312,7 @@ router.get('/:id/logs', protect, async (req: AuthRequest, res) => {
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -320,7 +320,7 @@ router.get('/:id/logs', protect, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Projeto não encontrado' });
     }
     
-    const logs = await deployService.getProjectLogs(req.params.id);
+    const logs = await deployService.getProjectLogs((req.params.id as string));
     res.json({ logs });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -348,7 +348,7 @@ router.post('/:id/exec', protect, async (req: AuthRequest, res) => {
     
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -357,7 +357,7 @@ router.post('/:id/exec', protect, async (req: AuthRequest, res) => {
       return;
     }
     
-    const output = await deployService.execCommand(req.params.id, validation.sanitized!);
+    const output = await deployService.execCommand((req.params.id as string), validation.sanitized!);
     res.json({ output });
   } catch (error: any) {
     res.status(500).json({ 
@@ -372,7 +372,7 @@ router.post('/:id/container/start', protect, async (req: AuthRequest, res) => {
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -380,7 +380,7 @@ router.post('/:id/container/start', protect, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Projeto não encontrado' });
     }
     
-    await deployService.startContainer(req.params.id);
+    await deployService.startContainer((req.params.id as string));
     res.json({ message: 'Container iniciado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -392,7 +392,7 @@ router.post('/:id/container/stop', protect, async (req: AuthRequest, res) => {
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -400,7 +400,7 @@ router.post('/:id/container/stop', protect, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Projeto não encontrado' });
     }
     
-    await deployService.stopContainer(req.params.id);
+    await deployService.stopContainer((req.params.id as string));
     res.json({ message: 'Container parado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -412,7 +412,7 @@ router.post('/:id/container/restart', protect, async (req: AuthRequest, res) => 
   try {
     // Verificar se o projeto pertence ao usuário
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -421,8 +421,8 @@ router.post('/:id/container/restart', protect, async (req: AuthRequest, res) => 
     }
     
     // Parar e iniciar o container
-    await deployService.stopContainer(req.params.id);
-    await deployService.startContainer(req.params.id);
+    await deployService.stopContainer((req.params.id as string));
+    await deployService.startContainer((req.params.id as string));
     res.json({ message: 'Container reiniciado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -464,7 +464,7 @@ router.post('/detect-credentials', protect, async (req: AuthRequest, res) => {
 // Verificar se porta está disponível
 router.get('/check-port/:port', protect, async (req: AuthRequest, res) => {
   try {
-    const port = parseInt(req.params.port);
+    const port = parseInt((req.params.port as string));
     
     if (isNaN(port) || !PortManager.isValidPort(port)) {
       res.status(400).json({ error: 'Porta inválida. Use portas entre 3000-9000' });
@@ -502,7 +502,7 @@ router.get('/suggest-ports', protect, async (req: AuthRequest, res) => {
 router.delete('/:id/versions/:version', protect, async (req: AuthRequest, res) => {
   try {
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -510,7 +510,7 @@ router.delete('/:id/versions/:version', protect, async (req: AuthRequest, res) =
       return res.status(404).json({ error: 'Projeto não encontrado' });
     }
 
-    const version = req.params.version;
+    const version = (req.params.version as string);
     console.log('🗑️ Deletando versão:', version);
     
     // Verificar se não é a versão atual
@@ -583,7 +583,7 @@ router.delete('/:id/versions/:version', protect, async (req: AuthRequest, res) =
 router.delete('/:id/deployments/:deploymentIndex', protect, async (req: AuthRequest, res) => {
   try {
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     
@@ -591,7 +591,7 @@ router.delete('/:id/deployments/:deploymentIndex', protect, async (req: AuthRequ
       return res.status(404).json({ error: 'Projeto não encontrado' });
     }
 
-    const deploymentIndex = parseInt(req.params.deploymentIndex);
+    const deploymentIndex = parseInt((req.params.deploymentIndex as string));
     
     if (isNaN(deploymentIndex) || deploymentIndex < 0 || deploymentIndex >= project.deployments.length) {
       return res.status(400).json({ error: 'Índice de deployment inválido' });
@@ -656,7 +656,7 @@ router.delete('/:id/deployments/:deploymentIndex', protect, async (req: AuthRequ
 router.post('/:id/fix-traefik', protect, async (req: AuthRequest, res) => {
   try {
     const project = await Project.findOne({ 
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id 
     });
     

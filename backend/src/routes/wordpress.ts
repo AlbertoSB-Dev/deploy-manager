@@ -95,7 +95,7 @@ router.get('/', protect, async (req: AuthRequest, res) => {
  */
 router.get('/:id', protect, async (req: AuthRequest, res) => {
   try {
-    const wordpress = await WordPressService.getById(req.params.id, req.user!._id.toString());
+    const wordpress = await WordPressService.getById((req.params.id as string), req.user!._id.toString());
     
     if (!wordpress) {
       return res.status(404).json({ error: 'WordPress não encontrado' });
@@ -129,7 +129,7 @@ router.get('/:id', protect, async (req: AuthRequest, res) => {
  */
 router.post('/:id/start', protect, async (req: AuthRequest, res) => {
   try {
-    await WordPressService.start(req.params.id, req.user!._id.toString());
+    await WordPressService.start((req.params.id as string), req.user!._id.toString());
     res.json({ success: true, message: 'WordPress iniciado' });
   } catch (error: any) {
     console.error('Erro ao iniciar WordPress:', error);
@@ -143,7 +143,7 @@ router.post('/:id/start', protect, async (req: AuthRequest, res) => {
  */
 router.post('/:id/stop', protect, async (req: AuthRequest, res) => {
   try {
-    await WordPressService.stop(req.params.id, req.user!._id.toString());
+    await WordPressService.stop((req.params.id as string), req.user!._id.toString());
     res.json({ success: true, message: 'WordPress parado' });
   } catch (error: any) {
     console.error('Erro ao parar WordPress:', error);
@@ -157,7 +157,7 @@ router.post('/:id/stop', protect, async (req: AuthRequest, res) => {
  */
 router.post('/:id/restart', protect, async (req: AuthRequest, res) => {
   try {
-    await WordPressService.restart(req.params.id, req.user!._id.toString());
+    await WordPressService.restart((req.params.id as string), req.user!._id.toString());
     res.json({ success: true, message: 'WordPress reiniciado' });
   } catch (error: any) {
     console.error('Erro ao reiniciar WordPress:', error);
@@ -171,7 +171,7 @@ router.post('/:id/restart', protect, async (req: AuthRequest, res) => {
  */
 router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
-    await WordPressService.delete(req.params.id, req.user!._id.toString());
+    await WordPressService.delete((req.params.id as string), req.user!._id.toString());
     res.json({ success: true, message: 'WordPress excluído' });
   } catch (error: any) {
     console.error('Erro ao excluir WordPress:', error);
@@ -186,7 +186,7 @@ router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => 
 router.get('/:id/logs', protect, async (req: AuthRequest, res) => {
   try {
     const lines = parseInt(req.query.lines as string) || 100;
-    const logs = await WordPressService.getLogs(req.params.id, req.user!._id.toString(), lines);
+    const logs = await WordPressService.getLogs((req.params.id as string), req.user!._id.toString(), lines);
     res.json(logs);
   } catch (error: any) {
     console.error('Erro ao obter logs:', error);
@@ -206,7 +206,7 @@ router.put('/:id/domain', protect, checkCanModify, async (req: AuthRequest, res)
       return res.status(400).json({ error: 'Domínio é obrigatório' });
     }
 
-    await WordPressService.updateDomain(req.params.id, req.user!._id.toString(), domain);
+    await WordPressService.updateDomain((req.params.id as string), req.user!._id.toString(), domain);
     res.json({ success: true, message: 'Domínio atualizado' });
   } catch (error: any) {
     console.error('Erro ao atualizar domínio:', error);
@@ -220,7 +220,7 @@ router.put('/:id/domain', protect, checkCanModify, async (req: AuthRequest, res)
  */
 router.get('/:id/status', protect, async (req: AuthRequest, res) => {
   try {
-    const status = await WordPressService.getStatus(req.params.id, req.user!._id.toString());
+    const status = await WordPressService.getStatus((req.params.id as string), req.user!._id.toString());
     res.json(status);
   } catch (error: any) {
     console.error('Erro ao obter status:', error);

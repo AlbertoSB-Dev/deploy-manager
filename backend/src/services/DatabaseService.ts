@@ -254,7 +254,7 @@ export class DatabaseService {
       emitLog(`🔍 Verificando se container já existe...`, 'info');
       const checkResult = await ssh.execCommand(`docker ps -a --filter "name=^/${config.name}$" --format "{{.ID}}"`);
       if (checkResult.stdout.trim()) {
-        emitLog(`⚠️  Container existente encontrado, removendo...`, 'warning');
+        emitLog(`⚠️  Container existente encontrado, removendo...`, 'info');
         await ssh.execCommand(`docker rm -f ${config.name}`);
         emitLog(`✅ Container antigo removido`, 'success');
       }

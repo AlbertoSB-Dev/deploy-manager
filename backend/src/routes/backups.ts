@@ -11,7 +11,7 @@ router.get('/', protect, async (req: AuthRequest, res) => {
   try {
     const { type, resourceId, status } = req.query;
     
-    const backups = await backupService.listBackups(req.user?._id!, {
+    const backups = await backupService.listBackups(req.user?._id!.toString(), {
       type: type as any,
       resourceId: resourceId as string,
       status: status as string
@@ -27,7 +27,7 @@ router.get('/', protect, async (req: AuthRequest, res) => {
 router.get('/:id', protect, async (req: AuthRequest, res) => {
   try {
     const backup = await Backup.findOne({
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id
     });
 
@@ -56,7 +56,7 @@ router.post('/', protect, checkSubscriptionActive, async (req: AuthRequest, res)
       resourceId,
       type,
       storageType,
-      userId: req.user?._id!,
+      userId: req.user?._id!.toString(),
       minioConfig
     });
 
@@ -72,10 +72,10 @@ router.post('/database/:databaseId', protect, checkSubscriptionActive, async (re
     const { storageType, minioConfig } = req.body;
 
     const backup = await backupService.createBackup({
-      resourceId: req.params.databaseId,
+      resourceId: (req.params.databaseId as string),
       type: 'database',
       storageType: storageType || 'local',
-      userId: req.user?._id!,
+      userId: req.user?._id!.toString(),
       minioConfig
     });
 
@@ -91,10 +91,10 @@ router.post('/project/:projectId', protect, checkSubscriptionActive, async (req:
     const { storageType, minioConfig } = req.body;
 
     const backup = await backupService.createBackup({
-      resourceId: req.params.projectId,
+      resourceId: (req.params.projectId as string),
       type: 'project',
       storageType: storageType || 'local',
-      userId: req.user?._id!,
+      userId: req.user?._id!.toString(),
       minioConfig
     });
 
@@ -110,10 +110,10 @@ router.post('/wordpress/:wordpressId', protect, checkSubscriptionActive, async (
     const { storageType, minioConfig } = req.body;
 
     const backup = await backupService.createBackup({
-      resourceId: req.params.wordpressId,
+      resourceId: (req.params.wordpressId as string),
       type: 'wordpress',
       storageType: storageType || 'local',
-      userId: req.user?._id!,
+      userId: req.user?._id!.toString(),
       minioConfig
     });
 
@@ -129,8 +129,8 @@ router.post('/:id/restore', protect, checkCanModify, async (req: AuthRequest, re
     const { targetResourceId } = req.body;
 
     await backupService.restoreBackup({
-      backupId: req.params.id,
-      userId: req.user?._id!,
+      backupId: (req.params.id as string),
+      userId: req.user?._id!.toString(),
       targetResourceId
     });
 
@@ -143,7 +143,7 @@ router.post('/:id/restore', protect, checkCanModify, async (req: AuthRequest, re
 // Deletar backup
 router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
-    await backupService.deleteBackup(req.params.id, req.user?._id!);
+    await backupService.deleteBackup((req.params.id as string), req.user?._id!.toString());
     res.json({ message: 'Backup deletado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -164,7 +164,7 @@ router.post('/upload', protect, async (req: AuthRequest, res) => {
 router.get('/:id/download', protect, async (req: AuthRequest, res) => {
   try {
     const backup = await Backup.findOne({
-      _id: req.params.id,
+      _id: (req.params.id as string),
       userId: req.user?._id
     });
 

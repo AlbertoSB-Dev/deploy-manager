@@ -128,7 +128,7 @@ router.delete('/versions/:version', protect, isAdmin, async (req: AuthRequest, r
   try {
     const { version } = req.params;
 
-    const result = await panelDeployService.deleteVersion(version);
+    const result = await panelDeployService.deleteVersion(version as string);
 
     res.json(result);
   } catch (error: any) {

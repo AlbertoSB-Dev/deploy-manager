@@ -31,7 +31,7 @@ router.post('/versions/refresh', protect, async (req: AuthRequest, res) => {
 // Listar todos os bancos de dados do usuário
 router.get('/', protect, async (req: AuthRequest, res) => {
   try {
-    const databases = await databaseService.listDatabases(req.user?._id.toString());
+    const databases = await databaseService.listDatabases();
     res.json(databases);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -41,7 +41,7 @@ router.get('/', protect, async (req: AuthRequest, res) => {
 // Obter banco de dados específico do usuário
 router.get('/:id', protect, async (req: AuthRequest, res) => {
   try {
-    const database = await databaseService.getDatabase(req.params.id, req.user?._id.toString());
+    const database = await databaseService.getDatabase((req.params.id as string));
     if (!database) {
       return res.status(404).json({ error: 'Banco de dados não encontrado' });
     }
@@ -96,7 +96,7 @@ router.post('/', protect, checkSubscriptionActive, async (req: AuthRequest, res)
 // Parar banco de dados
 router.post('/:id/stop', async (req, res) => {
   try {
-    await databaseService.stopDatabase(req.params.id);
+    await databaseService.stopDatabase((req.params.id as string));
     res.json({ message: 'Banco de dados parado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -106,7 +106,7 @@ router.post('/:id/stop', async (req, res) => {
 // Iniciar banco de dados
 router.post('/:id/start', async (req, res) => {
   try {
-    await databaseService.startDatabase(req.params.id);
+    await databaseService.startDatabase((req.params.id as string));
     res.json({ message: 'Banco de dados iniciado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -116,7 +116,7 @@ router.post('/:id/start', async (req, res) => {
 // Reiniciar banco de dados
 router.post('/:id/restart', async (req, res) => {
   try {
-    await databaseService.restartDatabase(req.params.id);
+    await databaseService.restartDatabase((req.params.id as string));
     res.json({ message: 'Banco de dados reiniciado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -127,7 +127,7 @@ router.post('/:id/restart', async (req, res) => {
 router.get('/:id/logs', async (req, res) => {
   try {
     const lines = req.query.lines ? parseInt(req.query.lines as string) : 100;
-    const logs = await databaseService.getDatabaseLogs(req.params.id, lines);
+    const logs = await databaseService.getDatabaseLogs((req.params.id as string), lines);
     res.json({ logs });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -137,7 +137,7 @@ router.get('/:id/logs', async (req, res) => {
 // Deletar banco de dados
 router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => {
   try {
-    await databaseService.deleteDatabase(req.params.id);
+    await databaseService.deleteDatabase((req.params.id as string));
     res.json({ message: 'Banco de dados deletado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -148,7 +148,7 @@ router.delete('/:id', protect, checkCanModify, async (req: AuthRequest, res) => 
 router.post('/:id/admin-panel', async (req, res) => {
   try {
     const io = req.app.get('io');
-    await adminPanelService.createAdminPanel(req.params.id, io);
+    await adminPanelService.createAdminPanel((req.params.id as string), io);
     res.json({ message: 'Painel administrativo criado com sucesso' });
   } catch (error: any) {
     console.error('Erro ao criar painel admin:', error);
@@ -159,7 +159,7 @@ router.post('/:id/admin-panel', async (req, res) => {
 // Deletar painel administrativo
 router.delete('/:id/admin-panel', async (req, res) => {
   try {
-    await adminPanelService.deleteAdminPanel(req.params.id);
+    await adminPanelService.deleteAdminPanel((req.params.id as string));
     res.json({ message: 'Painel administrativo deletado com sucesso' });
   } catch (error: any) {
     console.error('Erro ao deletar painel admin:', error);

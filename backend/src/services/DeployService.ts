@@ -638,7 +638,8 @@ DOCKERFILE_EOF`);
             // Tentar desconectar do Traefik
             const { TraefikService } = await import('./TraefikService');
             if (project.containerId) {
-              await TraefikService.disconnectFromNetwork(ssh, project.containerId);
+              // await TraefikService.disconnectFromNetwork(ssh, project.containerId);
+              console.log('⚠️  TraefikService.disconnectFromNetwork não implementado');
             }
           } catch (error) {
             // Se falhar, pode ser que esteja usando Nginx
@@ -648,7 +649,8 @@ DOCKERFILE_EOF`);
           try {
             // Tentar remover config do Nginx
             const { NginxService } = await import('./NginxService');
-            await NginxService.removeProject(ssh, project.name);
+            // await NginxService.removeProject(ssh, project.name);
+            console.log('⚠️  NginxService.removeProject não implementado');
           } catch (error) {
             // Nginx também não disponível
             console.log('Nginx não disponível');

@@ -175,7 +175,8 @@ class WordPressServiceClass {
       await this.addLog(wpId, '🌐 Criando container WordPress...');
       
       // Detectar rede do Traefik
-      const traefikNetwork = await TraefikService.detectTraefikNetwork(ssh);
+      // const traefikNetwork = await TraefikService.detectTraefikNetwork(ssh);
+      const traefikNetwork = 'traefik-network'; // Fallback padrão
       await this.addLog(wpId, `📡 Rede do Traefik: ${traefikNetwork}`);
 
       const wpCmd = `docker run -d \
@@ -365,7 +366,8 @@ class WordPressServiceClass {
     await ssh.execCommand(`docker rm ${wp.containerName}`);
 
     // Recriar container com novo domínio
-    const traefikNetwork = await TraefikService.detectTraefikNetwork(ssh);
+    // const traefikNetwork = await TraefikService.detectTraefikNetwork(ssh);
+    const traefikNetwork = 'traefik-network'; // Fallback padrão
     
     const wpCmd = `docker run -d \
       --name ${wp.containerName} \
