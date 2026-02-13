@@ -1,0 +1,45 @@
+═══════════════════════════════════════════════════════════════
+🚀 COMANDOS PARA EXECUTAR NA VPS
+═══════════════════════════════════════════════════════════════
+
+Execute estes comandos na ordem:
+
+# 1. Ir para o diretório
+cd /opt/ark-deploy
+
+# 2. Atualizar código
+git pull origin main
+
+# 3. Configurar NEXT_PUBLIC_API_URL manualmente
+nano .env
+
+# Adicionar esta linha (se não existir):
+NEXT_PUBLIC_API_URL=http://api.38.242.213.195.sslip.io/api
+
+# Salvar: Ctrl+O, Enter, Ctrl+X
+
+# 4. Reiniciar backend (para aplicar correção do .env)
+docker-compose restart backend
+
+# 5. Rebuild frontend (para aplicar NEXT_PUBLIC_API_URL)
+docker-compose down
+docker-compose build --no-cache frontend
+docker-compose up -d
+
+# 6. Verificar se funcionou
+docker-compose logs frontend | grep "API URL"
+
+# Deve mostrar:
+# 🌐 API URL configurada: http://api.38.242.213.195.sslip.io/api
+
+═══════════════════════════════════════════════════════════════
+✅ PRONTO! Agora teste:
+═══════════════════════════════════════════════════════════════
+
+1. Acessar: http://painel.38.242.213.195.sslip.io/login
+2. Login: superadmin@arkdeploy.com / Admin123
+3. Ir em Admin > Configurações do Sistema
+4. Modificar qualquer campo e salvar
+5. ✅ Não deve mais dar erro ENOENT
+
+═══════════════════════════════════════════════════════════════
