@@ -375,23 +375,115 @@ npm run dev
 1. Clique em "Rollback" para voltar à versão anterior (rápido)
 2. Ou acesse o histórico para escolher uma versão específica
 
-## 🔧 Configuração
+## 🔧 Configuração de Variáveis de Ambiente
 
-### Backend (.env)
+### 📁 Estrutura de Arquivos .env
 
-```env
-PORT=8001
-MONGODB_URI=mongodb://localhost:27017/ark-deploy
-JWT_SECRET=your-secret-key
-PROJECTS_DIR=/var/www/projects
-NODE_ENV=development
+O projeto usa uma estrutura centralizada para facilitar a configuração:
+
+```
+deploy-manager/
+├── .env                    # ✅ PRODUÇÃO (Docker) - USE ESTE
+├── .env.example            # Template com todas as variáveis
+├── .env.production         # Template específico para VPS
+├── backend/
+│   ├── .env               # ⚠️ Apenas desenvolvimento local
+│   └── .env.example
+└── frontend/
+    ├── .env.local         # ⚠️ Apenas desenvolvimento local
+    └── .env.example
 ```
 
-### Frontend (.env.local)
+### 🎯 Qual Arquivo Usar?
+
+**Em Produção (VPS com Docker):**
+```bash
+cd /opt/ark-deploy
+cp .env.production .env
+nano .env  # Ajustar valores
+```
+
+**Em Desenvolvimento Local:**
+- Backend: `backend/.env`
+- Frontend: `frontend/.env.local`
+
+### ⚙️ Variáveis Principais
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8001/api
+# MongoDB
+MONGO_PASSWORD=sua-senha-segura
+
+# Segurança (gere com: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
+JWT_SECRET=sua-chave-jwt
+ENCRYPTION_KEY=sua-chave-encryption
+
+# Servidor
+SERVER_IP=38.242.213.195
+BASE_DOMAIN=sslip.io
+FRONTEND_URL=http://painel.SEU_IP.sslip.io
+
+# API URL (IMPORTANTE: requer rebuild do frontend se mudar)
+NEXT_PUBLIC_API_URL=http://api.SEU_IP.sslip.io/api
+
+# GitHub OAuth (opcional)
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GITHUB_CALLBACK_URL=http://painel.SEU_IP.sslip.io/auth/github/callback
+
+# Assas (configurável pelo painel)
+ASSAS_API_KEY=
+ASSAS_WEBHOOK_TOKEN=
+ASSAS_ENVIRONMENT=sandbox
+
+# Email (opcional)
+EMAIL_ENABLED=false
+EMAIL_SERVICE=gmail
+EMAIL_USER=
+EMAIL_PASSWORD=
 ```
+
+### 🔄 Aplicar Mudanças
+
+**Variáveis Runtime (maioria):**
+```bash
+docker-compose restart backend
+```
+
+**NEXT_PUBLIC_API_URL (build-time):**
+```bash
+docker-compose down
+docker-compose build --no-cache frontend
+docker-compose up -d
+```
+
+📖 **Documentação completa:** [ENV-SETUP.md](./ENV-SETUP.md)
+
+### 🔍 Verificar Configuração
+
+Use o script de diagnóstico para verificar se tudo está correto:
+
+```bash
+chmod +x check-env.sh
+./check-env.sh
+```
+
+O script verifica:
+- ✅ Arquivo .env existe e está configurado
+- ✅ Variáveis obrigatórias estão preenchidas
+- ✅ Containers Docker estão rodando
+- ✅ NEXT_PUBLIC_API_URL está correto
+- ✅ Socket.IO não está tentando conectar em localhost
+
+### 🔄 Migrar de Configuração Antiga
+
+Se você tem `backend/.env` e `frontend/.env.local`:
+
+```bash
+chmod +x migrate-env.sh
+./migrate-env.sh
+```
+
+O script migra automaticamente todas as variáveis para `.env` na raiz.
 
 ## 📊 API Endpoints
 
@@ -422,7 +514,67 @@ NEXT_PUBLIC_API_URL=http://localhost:8001/api
 - 🔑 [GitHub OAuth Setup](./docs/GITHUB-OAUTH-SETUP.md)
 - 🐳 [Integração Docker](./docs/DOCKER-INTEGRATION.md)
 - 🐛 [Docker Troubleshooting](./docs/DOCKER-TROUBLESHOOTING.md)
+- ⚙️ [Configuração de Variáveis](./ENV-SETUP.md)
 - 📝 [Changelog](./CHANGELOG.md)
+
+## 🔧 Troubleshooting
+
+### Socket.IO não conecta (erro CORS)
+
+**Sintoma**: Erro no console do navegador sobre localhost:8001
+
+**Causa**: `NEXT_PUBLIC_API_URL` não configurado corretamente
+
+**Solução**:
+```bash
+# 1. Verificar configuração
+./check-env.sh
+
+# 2. Corrigir .env se necessário
+nano .env
+# NEXT_PUBLIC_API_URL=http://api.SEU_IP.sslip.io/api
+
+# 3. Rebuild do frontend (obrigatório!)
+docker-compose down
+docker-compose build --no-cache frontend
+docker-compose up -d
+```
+
+### Sistema não detecta atualizações
+
+**Causa**: Commit hash não capturado durante build
+
+**Solução**:
+```bash
+docker-compose build --no-cache backend
+docker-compose up -d
+docker-compose logs backend | grep -i "commit"
+```
+
+### Containers não iniciam
+
+**Solução**:
+```bash
+# Ver logs detalhados
+docker-compose logs
+
+# Verificar configuração
+./check-env.sh
+
+# Reiniciar do zero
+docker-compose down
+docker-compose up -d
+```
+
+### Migrar de configuração antiga
+
+Se você tem `backend/.env` e `frontend/.env.local`:
+
+```bash
+./migrate-env.sh
+```
+
+📖 **Mais soluções**: [ENV-SETUP.md](./ENV-SETUP.md#-erros-comuns)
 
 ## 🎯 Roadmap
 
