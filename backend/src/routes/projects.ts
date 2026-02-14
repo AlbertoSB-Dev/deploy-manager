@@ -216,8 +216,34 @@ router.post('/:id/deploy', protect, checkSubscriptionActive, async (req: AuthReq
     }
     
     const { version, deployedBy } = req.body;
-    const result = await deployService.deployProject((req.params.id as string), version, deployedBy || 'manual');
-    res.json(result);
+    
+    // Retornar imediatamente e fazer deploy em background
+    res.json({ 
+      success: true, 
+      message: 'Deploy iniciado em background',
+      projectId: req.params.id,
+      version 
+    });
+    
+    // Fazer deploy em background
+    const io = (req as any).app.get('io');
+    deployService.deployProject((req.params.id as string), version, deployedBy || 'manual')
+      .then(result => {
+        console.log('✅ Deploy concluído:', result);
+        io.to(`deploy-${req.params.id}`).emit('deploy-complete', {
+          projectId: req.params.id,
+          success: true,
+          message: 'Deploy concluído com sucesso'
+        });
+      })
+      .catch(error => {
+        console.error('❌ Erro no deploy:', error);
+        io.to(`deploy-${req.params.id}`).emit('deploy-complete', {
+          projectId: req.params.id,
+          success: false,
+          message: error.message
+        });
+      });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
