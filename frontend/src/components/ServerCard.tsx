@@ -9,6 +9,7 @@ import TerminalSSH from './TerminalSSH';
 import FileManagerDashboard from './FileManagerDashboard';
 import { ServerMonitorModal } from './ServerMonitorModal';
 import DeleteServerModal from './DeleteServerModal';
+import { SystemUpdateModal } from './SystemUpdateModal';
 
 interface ServerCardProps {
   server: any;
@@ -36,6 +37,7 @@ export default function ServerCard({
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   const totalServices = projects.length + databases.length + wordpress.length;
   const isOnline = server.status === 'online';
@@ -58,12 +60,13 @@ export default function ServerCard({
     
     try {
       setUpdating(true);
-      toast.loading('Atualizando sistema...', { id: 'update-system' });
+      setShowUpdateModal(true);
+      toast.loading('Iniciando atualização...', { id: 'update-system' });
       await api.post(`/servers/${server._id}/update-system`);
-      toast.success('Sistema atualizado com sucesso!', { id: 'update-system' });
-      onDataUpdate?.();
+      toast.success('Atualização iniciada!', { id: 'update-system' });
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Erro ao atualizar sistema', { id: 'update-system' });
+      setShowUpdateModal(false);
     } finally {
       setUpdating(false);
     }
@@ -254,6 +257,18 @@ export default function ServerCard({
           onClose={() => setShowDeleteModal(false)}
           onDeleted={() => {
             setShowDeleteModal(false);
+            onDataUpdate?.();
+          }}
+        />
+      )}
+
+      {showUpdateModal && (
+        <SystemUpdateModal
+          serverId={server._id}
+          serverName={server.name}
+          onClose={() => setShowUpdateModal(false)}
+          onComplete={() => {
+            setShowUpdateModal(false);
             onDataUpdate?.();
           }}
         />

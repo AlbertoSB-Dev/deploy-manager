@@ -16,8 +16,52 @@ export function ProvisioningStatusModal({ serverId, serverName, onClose }: Provi
 
   useEffect(() => {
     loadStatus();
-    const interval = setInterval(loadStatus, 3000); // Atualizar a cada 3 segundos
-    return () => clearInterval(interval);
+    
+    // Conectar ao WebSocket para atualizações em tempo real
+    const socket = (window as any).io?.(process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8001');
+    
+    if (socket) {
+      // Escutar eventos de progresso
+      socket.on('provisioning:progress', (data: any) => {
+        if (data.serverId === serverId) {
+          setStatus((prev: any) => ({
+            ...prev,
+            status: data.status,
+            progress: data.progress
+          }));
+          
+          // Adicionar mensagem aos logs
+          if (data.message) {
+            setStatus((prev: any) => ({
+              ...prev,
+              logs: [...(prev?.logs || []), data.message]
+            }));
+          }
+        }
+      });
+      
+      // Escutar logs
+      socket.on('provisioning:log', (data: any) => {
+        if (data.serverId === serverId) {
+          setStatus((prev: any) => ({
+            ...prev,
+            logs: [...(prev?.logs || []), data.log]
+          }));
+        }
+      });
+    }
+    
+    // Fallback: polling a cada 3 segundos
+    const interval = setInterval(loadStatus, 3000);
+    
+    return () => {
+      clearInterval(interval);
+      if (socket) {
+        socket.off('provisioning:progress');
+        socket.off('provisioning:log');
+        socket.disconnect();
+      }
+    };
   }, [serverId]);
 
   const loadStatus = async () => {

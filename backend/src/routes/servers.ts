@@ -307,46 +307,78 @@ router.post('/servers/:id/update-system', protect, async (req: AuthRequest, res)
     
     console.log(`🔄 Atualizando sistema do servidor ${server.name}...`);
     
-    await sshService.connect(server);
+    // Obter io para emitir eventos
+    const io = (req as any).app.get('io');
     
-    // Detectar sistema operacional
-    const osResult = await sshService.executeCommand(serverId, 'cat /etc/os-release | grep "^ID=" | cut -d= -f2 | tr -d \'"\'');
-    const os = osResult.stdout.trim();
-    
-    let updateCommands: string[] = [];
-    
-    if (os === 'ubuntu' || os === 'debian') {
-      updateCommands = [
-        'export DEBIAN_FRONTEND=noninteractive',
-        'apt-get update -y',
-        'apt-get upgrade -y',
-        'apt-get autoremove -y',
-        'apt-get clean'
-      ];
-    } else if (os === 'centos' || os === 'rhel') {
-      updateCommands = [
-        'yum update -y',
-        'yum clean all'
-      ];
-    } else {
-      return res.status(400).json({ error: 'Sistema operacional não suportado' });
-    }
-    
-    // Executar comandos
-    for (const cmd of updateCommands) {
-      console.log(`Executando: ${cmd}`);
-      const result = await sshService.executeCommand(serverId, cmd);
-      if (result.code !== 0) {
-        console.error(`Erro ao executar ${cmd}:`, result.stderr);
+    // Emitir log inicial
+    const emitLog = (log: string) => {
+      console.log(log);
+      if (io) {
+        io.emit('system-update:log', { serverId, log });
       }
-    }
+    };
     
-    console.log('✅ Sistema atualizado com sucesso');
+    // Executar atualização em background
+    (async () => {
+      try {
+        await sshService.connect(server);
+        
+        emitLog('🔌 Conectado ao servidor');
+        
+        // Detectar sistema operacional
+        const osResult = await sshService.executeCommand(serverId, 'cat /etc/os-release | grep "^ID=" | cut -d= -f2 | tr -d \'"\'');
+        const os = osResult.stdout.trim();
+        
+        emitLog(`📦 Sistema detectado: ${os}`);
+        
+        let updateCommands: string[] = [];
+        
+        if (os === 'ubuntu' || os === 'debian') {
+          updateCommands = [
+            'export DEBIAN_FRONTEND=noninteractive',
+            'apt-get update -y',
+            'apt-get upgrade -y',
+            'apt-get autoremove -y',
+            'apt-get clean'
+          ];
+        } else if (os === 'centos' || os === 'rhel') {
+          updateCommands = [
+            'yum update -y',
+            'yum clean all'
+          ];
+        } else {
+          emitLog(`❌ Sistema operacional não suportado: ${os}`);
+          if (io) io.emit('system-update:error', { serverId, error: 'Sistema operacional não suportado' });
+          return;
+        }
+        
+        // Executar comandos
+        for (const cmd of updateCommands) {
+          emitLog(`⚙️ Executando: ${cmd}`);
+          const result = await sshService.executeCommand(serverId, cmd);
+          if (result.code !== 0) {
+            emitLog(`⚠️ Aviso ao executar ${cmd}: ${result.stderr}`);
+          } else {
+            emitLog(`✅ ${cmd} concluído`);
+          }
+        }
+        
+        emitLog('✅ Sistema atualizado com sucesso!');
+        
+        if (io) {
+          io.emit('system-update:complete', { serverId });
+        }
+      } catch (error: any) {
+        emitLog(`❌ Erro: ${error.message}`);
+        if (io) {
+          io.emit('system-update:error', { serverId, error: error.message });
+        }
+      }
+    })();
     
     res.json({ 
       success: true, 
-      message: 'Sistema atualizado com sucesso',
-      os
+      message: 'Atualização iniciada em background'
     });
   } catch (error: any) {
     console.error('Erro ao atualizar sistema:', error);
