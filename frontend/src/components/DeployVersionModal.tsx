@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Rocket, AlertTriangle, CheckCircle, Loader } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Rocket, AlertTriangle, CheckCircle, Loader, Terminal as TerminalIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { io, Socket } from 'socket.io-client';
 
 interface DeployVersionModalProps {
   projectId: string;
@@ -25,6 +26,26 @@ export default function DeployVersionModal({
   const [selectedVersion, setSelectedVersion] = useState('');
   const [deploying, setDeploying] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [deployLogs, setDeployLogs] = useState<string[]>([]);
+  const [showTerminal, setShowTerminal] = useState(false);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+  const socketRef = useRef<Socket | null>(null);
+
+  // Auto-scroll para o final dos logs
+  useEffect(() => {
+    if (logsEndRef.current && deploying) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [deployLogs, deploying]);
+
+  // Limpar socket ao desmontar
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
 
   // Sugerir próxima versão
   useEffect(() => {
@@ -83,19 +104,62 @@ export default function DeployVersionModal({
 
     try {
       setDeploying(true);
+      setShowTerminal(true);
+      setDeployLogs([]);
       toast.loading('Iniciando deploy...', { id: 'deploy' });
+
+      // Conectar ao WebSocket para receber logs em tempo real
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+      const wsUrl = apiUrl.replace(/^http/, 'ws').replace(/\/api$/, '');
       
+      const socket = io(wsUrl, {
+        path: '/socket.io',
+        transports: ['websocket', 'polling']
+      });
+      
+      socketRef.current = socket;
+
+      socket.on('connect', () => {
+        console.log('🔌 WebSocket conectado para logs de deploy');
+        setDeployLogs(prev => [...prev, '🔌 Conectado ao servidor de logs']);
+        // Entrar na sala do projeto para receber logs específicos
+        socket.emit('join-deploy', projectId);
+      });
+
+      socket.on('deploy-log', (data: { projectId?: string; message: string; timestamp: string }) => {
+        console.log('📝 Log recebido:', data);
+        setDeployLogs(prev => [...prev, data.message]);
+      });
+
+      socket.on('deploy-complete', (data: { projectId?: string; success: boolean; message?: string }) => {
+        console.log('✅ Deploy completo:', data);
+        if (data.success) {
+          setDeployLogs(prev => [...prev, '✅ Deploy concluído com sucesso!']);
+          toast.success(`Deploy da versão ${formattedVersion} concluído!`, { id: 'deploy' });
+          setTimeout(() => {
+            onSuccess();
+            onClose();
+          }, 2000);
+        } else {
+          setDeployLogs(prev => [...prev, `❌ Deploy falhou: ${data.message || 'Erro desconhecido'}`]);
+          toast.error('Deploy falhou', { id: 'deploy' });
+        }
+        setDeploying(false);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('🔌 WebSocket desconectado');
+      });
+      
+      // Iniciar deploy
       await api.post(`/projects/${projectId}/deploy`, {
         version: formattedVersion,
         deployedBy: 'admin'
       });
       
-      toast.success(`Deploy da versão ${formattedVersion} concluído!`, { id: 'deploy' });
-      onSuccess();
-      onClose();
     } catch (error: any) {
+      setDeployLogs(prev => [...prev, `❌ Erro: ${error.response?.data?.error || error.message}`]);
       toast.error(error.response?.data?.error || 'Erro no deploy', { id: 'deploy' });
-    } finally {
       setDeploying(false);
     }
   };
@@ -293,6 +357,60 @@ export default function DeployVersionModal({
               )}
             </button>
           </div>
+
+          {/* Terminal de Logs */}
+          {showTerminal && (
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-2">
+                <TerminalIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  Logs do Deploy
+                </h3>
+                {deploying && (
+                  <div className="flex items-center gap-2 ml-auto">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Em execução
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="bg-gray-900 rounded-xl p-4 font-mono text-sm max-h-96 overflow-y-auto">
+                {deployLogs.length === 0 ? (
+                  <div className="flex items-center justify-center h-32 text-gray-500">
+                    <div className="text-center">
+                      <TerminalIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Aguardando logs do deploy...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {deployLogs.map((log, index) => (
+                      <div
+                        key={index}
+                        className={`text-gray-300 ${
+                          log.includes('error') || log.includes('Error') || log.includes('ERROR') || log.includes('❌')
+                            ? 'text-red-400'
+                            : log.includes('warn') || log.includes('Warning') || log.includes('WARN') || log.includes('⚠️')
+                            ? 'text-yellow-400'
+                            : log.includes('success') || log.includes('Success') || log.includes('✅')
+                            ? 'text-green-400'
+                            : log.includes('🔌') || log.includes('📦') || log.includes('🚀')
+                            ? 'text-blue-400'
+                            : ''
+                        }`}
+                      >
+                        <span className="text-gray-600 select-none mr-2">{index + 1}</span>
+                        {log}
+                      </div>
+                    ))}
+                    <div ref={logsEndRef} />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
