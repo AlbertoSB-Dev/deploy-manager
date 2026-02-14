@@ -9,6 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import DeployVersionModal from './DeployVersionModal';
 import BackupManager from './BackupManager';
 import EditProjectModal from './EditProjectModal';
+import ProjectLogsModal from './ProjectLogsModal';
 
 interface ServiceItemProps {
   item: any;
@@ -26,6 +27,7 @@ export default function ServiceItem({ item, type, onDataUpdate }: ServiceItemPro
   const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set()); // Versões expandidas
   const [showBackups, setShowBackups] = useState(false); // Modal de backups
   const [showEditModal, setShowEditModal] = useState(false); // Modal de edição
+  const [showLogsModal, setShowLogsModal] = useState(false); // Modal de logs
 
   const getStatusIcon = () => {
     const status = item.status;
@@ -376,7 +378,7 @@ export default function ServiceItem({ item, type, onDataUpdate }: ServiceItemPro
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(`/logs/${item._id}`, '_blank');
+                setShowLogsModal(true);
               }}
               className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
               title="Ver Logs"
@@ -750,7 +752,7 @@ export default function ServiceItem({ item, type, onDataUpdate }: ServiceItemPro
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.open(`/logs/${item._id}`, '_blank');
+                      setShowLogsModal(true);
                     }}
                     className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium border-2 border-gray-200 dark:border-gray-600"
                   >
@@ -1136,6 +1138,15 @@ export default function ServiceItem({ item, type, onDataUpdate }: ServiceItemPro
           onSuccess={() => {
             onDataUpdate?.();
           }}
+        />
+      )}
+
+      {/* Modal de Logs */}
+      {showLogsModal && type === 'project' && (
+        <ProjectLogsModal
+          projectId={localItem._id}
+          projectName={localItem.displayName || localItem.name}
+          onClose={() => setShowLogsModal(false)}
         />
       )}
     </>

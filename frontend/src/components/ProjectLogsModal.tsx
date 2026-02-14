@@ -1,53 +1,49 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { X, Terminal } from 'lucide-react';
 import LiveLogsViewer from './LiveLogsViewer';
 
 interface ProjectLogsModalProps {
-  isOpen: boolean;
+  projectId: string;
+  projectName: string;
   onClose: () => void;
-  project: {
-    _id: string;
-    name: string;
-  };
 }
 
-export default function ProjectLogsModal({ isOpen, onClose, project }: ProjectLogsModalProps) {
-  if (!isOpen) return null;
-
+export default function ProjectLogsModal({ projectId, projectName, onClose }: ProjectLogsModalProps) {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-          onClick={onClose}
-        />
-
-        {/* Modal */}
-        <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Logs: {project.name}
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Visualização em tempo real dos logs do container
-              </p>
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-900 to-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/10 rounded-lg">
+              <Terminal className="w-6 h-6 text-white" />
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
+            <div>
+              <h2 className="text-xl font-bold text-white">Logs em Tempo Real</h2>
+              <p className="text-sm text-gray-300 mt-1">{projectName}</p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-white/10 rounded-lg transition text-white"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-hidden">
-            <LiveLogsViewer projectId={project._id} projectName={project.name} />
-          </div>
+        {/* Logs Viewer */}
+        <div className="flex-1 overflow-hidden">
+          <LiveLogsViewer 
+            projectId={projectId} 
+            projectName={projectName}
+          />
         </div>
       </div>
     </div>
