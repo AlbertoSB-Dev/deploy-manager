@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   
+  // Necessário para build standalone (Docker)
+  output: 'standalone',
+  
   typescript: {
     ignoreBuildErrors: true,
   },
