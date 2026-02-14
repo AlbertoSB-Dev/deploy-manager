@@ -146,17 +146,17 @@ export default function TerminalSSH({ onClose }: TerminalSSHProps) {
       }
 
       // Adicionar output
-      if (response.data.output) {
+      if (response.data.output !== undefined && response.data.output !== null) {
         const outputText = response.data.output.trim();
         if (outputText) {
           const lines = outputText.split('\n');
           setOutput(prev => [...prev, ...lines]);
         } else {
-          // Comando executado mas sem output (ex: cd)
-          setOutput(prev => [...prev, '✅ Comando executado com sucesso']);
+          // Comando executado mas sem output (ex: cd, comandos silenciosos)
+          setOutput(prev => [...prev, '✅ Comando executado (sem output)']);
         }
       } else if (response.data.code === 0) {
-        // Sucesso mas sem output
+        // Sucesso mas sem campo output
         setOutput(prev => [...prev, '✅ Comando executado com sucesso']);
       }
       
