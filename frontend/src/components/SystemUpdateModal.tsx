@@ -25,12 +25,15 @@ export function SystemUpdateModal({ serverId, serverName, onClose, onComplete }:
 
   useEffect(() => {
     // Conectar ao WebSocket
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8001';
+    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
+    // Remover /api do final se existir
+    apiUrl = apiUrl.replace(/\/api$/, '');
     console.log('🔌 Conectando ao WebSocket:', apiUrl);
     
     const socket = io(apiUrl, {
       transports: ['websocket', 'polling'],
-      reconnection: true
+      reconnection: true,
+      path: '/socket.io'
     });
     
     socketRef.current = socket;
