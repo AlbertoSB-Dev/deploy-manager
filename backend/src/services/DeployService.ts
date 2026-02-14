@@ -277,13 +277,32 @@ DOCKERFILE_EOF`);
       const networkName = 'coolify';
       await ssh.execCommand(`docker network create ${networkName} 2>/dev/null || true`);
       
-      // Criar container com PORT configurada
+      // Gerar labels do Traefik
+      const { TraefikService } = await import('./TraefikService');
+      const serverIp = server.host; // IP do servidor
+      const traefikLabels = await TraefikService.generateLabels(
+        project.domain || `${project.name}.${serverIp}.sslip.io`,
+        project.port || 3000,
+        project.name,
+        false // SSL desabilitado por enquanto
+      );
+      
+      // Converter labels para argumentos do docker run
+      const labelArgs = Object.entries(traefikLabels)
+        .map(([key, value]) => `--label "${key}=${value}"`)
+        .join(' \\\n          ');
+      
+      this.emitLog(project._id.toString(), `🏷️  Configurando Traefik para: ${project.domain || `${project.name}.${serverIp}.sslip.io`}`);
+      logs += `🏷️  Configurando Traefik para: ${project.domain || `${project.name}.${serverIp}.sslip.io`}\n`;
+      
+      // Criar container com PORT configurada e labels do Traefik
       const runResult = await ssh.execCommand(`
         docker run -d \
           --name ${containerName} \
           --network ${networkName} \
           -e PORT=${project.port || 3000} \
           ${envVars} \
+          ${labelArgs} \
           --restart unless-stopped \
           ${project.name}:${commit.substring(0, 8)}
       `);
