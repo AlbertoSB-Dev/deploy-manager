@@ -45,11 +45,8 @@ export default function GitHubConnect({ onConnected, onViewRepos }: GitHubConnec
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
       
-      const response = await fetch(`${apiUrl}/auth/github/connect`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      // Usar rota pública do GitHub OAuth
+      const response = await fetch(`${apiUrl}/github/auth/github`);
       const data = await response.json();
 
       const width = 600;
@@ -67,17 +64,16 @@ export default function GitHubConnect({ onConnected, onViewRepos }: GitHubConnec
         if (event.data.type === 'github-oauth-code') {
           popup?.close();
           
+          // Usar rota pública do callback (sem autenticação)
           const callbackResponse = await fetch(
-            `${apiUrl}/auth/github/connect/callback`,
+            `${apiUrl}/github/auth/github/callback`,
             {
               method: 'POST',
               headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Content-Type': 'application/json'
               },
               body: JSON.stringify({ 
-                code: event.data.code,
-                state: event.data.state 
+                code: event.data.code
               })
             }
           );
