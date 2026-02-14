@@ -1,8 +1,8 @@
-# 🚀 Ark Deploy
+# 🚀 Ark Panel
 
 Painel centralizado para gerenciar servidores VPS via SSH. Configure, faça deploy e monitore múltiplos servidores sem instalar nada neles. Tudo automatizado.
 
-> **🎉 Última Atualização (13/02/2026):** Sistema de verificação automática de atualizações via GitHub API implementado! Agora o painel detecta automaticamente quando há novas versões disponíveis.
+> **🎉 Última Atualização (14/02/2026):** Sistema completo de deploy com Traefik, logs em tempo real via WebSocket e modal de logs implementado!
 
 ## ⚡ Instalação em 1 Comando
 
@@ -16,6 +16,7 @@ curl -fsSL https://raw.githubusercontent.com/AlbertoSB-Dev/deploy-manager/main/i
 - ✅ Backend e Frontend rodando
 - ✅ Usuário admin criado (admin@admin.com / admin123)
 - ✅ Domínios automáticos com sslip.io
+- ✅ Traefik configurado para proxy reverso
 
 **Acesse:** `http://painel.SEU_IP.sslip.io`
 
