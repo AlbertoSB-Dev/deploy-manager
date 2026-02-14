@@ -37,7 +37,8 @@ router.get('/auth/github', async (req, res) => {
     console.log('  REDIRECT_URI:', config.redirectUri);
     
     const scope = 'repo,read:user,user:email';
-    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${scope}`;
+    // Adicionar prompt=select_account para forçar seleção de conta
+    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${scope}&prompt=select_account`;
     
     res.json({ 
       authUrl: githubAuthUrl,
