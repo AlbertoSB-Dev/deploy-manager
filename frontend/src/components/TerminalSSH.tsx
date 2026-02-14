@@ -34,6 +34,9 @@ export default function TerminalSSH({ onClose }: TerminalSSHProps) {
   const [output, setOutput] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingContainers, setLoadingContainers] = useState(false);
+  const [currentDir, setCurrentDir] = useState<string>('~');
+  const [username, setUsername] = useState<string>('root');
+  const [hostname, setHostname] = useState<string>('server');
   const outputRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -87,27 +90,29 @@ export default function TerminalSSH({ onClose }: TerminalSSHProps) {
     const server = servers.find(s => s._id === selectedServer);
     if (!server) return;
 
-    setOutput([
-      `✅ Conectado ao servidor: ${server.name} (${server.host})`,
-      `📁 Executando: pwd...`
-    ]);
+    setOutput([]);
+    setUsername(server.username);
 
     try {
-      const response = await api.post(`/servers/${selectedServer}/exec`, {
+      // Obter hostname
+      const hostnameResponse = await api.post(`/servers/${selectedServer}/exec`, {
+        command: 'hostname'
+      });
+      
+      if (hostnameResponse.data.output) {
+        setHostname(hostnameResponse.data.output.trim());
+      }
+
+      // Obter diretório atual
+      const pwdResponse = await api.post(`/servers/${selectedServer}/exec`, {
         command: 'pwd'
       });
 
-      if (response.data.output) {
-        setOutput(prev => [
-          ...prev.slice(0, -1),
-          `📁 Diretório atual: ${response.data.output.trim()}`
-        ]);
+      if (pwdResponse.data.output) {
+        setCurrentDir(pwdResponse.data.output.trim());
       }
     } catch (error: any) {
-      setOutput(prev => [
-        ...prev.slice(0, -1),
-        `❌ Erro ao obter diretório: ${error.message}`
-      ]);
+      console.error('Erro ao obter informações do servidor:', error);
     }
   };
 
@@ -119,16 +124,13 @@ export default function TerminalSSH({ onClose }: TerminalSSHProps) {
     }
 
     setLoading(true);
-    const timestamp = new Date().toLocaleTimeString();
     
-    // Adicionar comando ao output
-    if (selectedContainer) {
-      const container = containers.find(c => c.id === selectedContainer);
-      setOutput(prev => [...prev, `[${timestamp}] ${container?.name} $ ${command}`]);
-    } else {
-      const server = servers.find(s => s._id === selectedServer);
-      setOutput(prev => [...prev, `[${timestamp}] ${server?.name} $ ${command}`]);
-    }
+    // Mostrar prompt + comando
+    const prompt = selectedContainer 
+      ? `${username}@container:${currentDir}#`
+      : `${username}@${hostname}:${currentDir}#`;
+    
+    setOutput(prev => [...prev, `${prompt} ${command}`]);
 
     try {
       let response;
@@ -145,26 +147,34 @@ export default function TerminalSSH({ onClose }: TerminalSSHProps) {
         });
       }
 
-      // Adicionar output
+      // Adicionar output (sem mensagens de sucesso)
       if (response.data.output !== undefined && response.data.output !== null) {
         const outputText = response.data.output.trim();
         if (outputText) {
           const lines = outputText.split('\n');
           setOutput(prev => [...prev, ...lines]);
-        } else {
-          // Comando executado mas sem output (ex: cd, comandos silenciosos)
-          setOutput(prev => [...prev, '✅ Comando executado (sem output)']);
         }
-      } else if (response.data.code === 0) {
-        // Sucesso mas sem campo output
-        setOutput(prev => [...prev, '✅ Comando executado com sucesso']);
       }
       
       if (response.data.error) {
-        setOutput(prev => [...prev, `❌ Erro: ${response.data.error}`]);
+        setOutput(prev => [...prev, `bash: ${command.split(' ')[0]}: ${response.data.error}`]);
+      }
+
+      // Atualizar diretório atual se o comando foi cd
+      if (command.trim().startsWith('cd ') || command.trim() === 'cd') {
+        try {
+          const pwdResponse = await api.post(`/servers/${selectedServer}/exec`, {
+            command: 'pwd'
+          });
+          if (pwdResponse.data.output) {
+            setCurrentDir(pwdResponse.data.output.trim());
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar diretório:', error);
+        }
       }
     } catch (error: any) {
-      setOutput(prev => [...prev, `❌ Erro: ${error.response?.data?.error || error.message}`]);
+      setOutput(prev => [...prev, `bash: ${error.response?.data?.error || error.message}`]);
     } finally {
       setLoading(false);
       setCommand('');
@@ -303,36 +313,21 @@ export default function TerminalSSH({ onClose }: TerminalSSHProps) {
 
         {output.length === 0 ? (
           <div className="text-gray-500 space-y-2">
-            <div>$ Bem-vindo ao Terminal SSH</div>
-            <div>$ Selecione um servidor acima para começar</div>
-            <div>$ Opcionalmente, selecione um container gerenciado (projeto ou banco)</div>
-            <div className="mt-4 text-gray-400">Comandos úteis no servidor:</div>
-            <div className="ml-4 text-gray-400">• ls -la (listar arquivos)</div>
-            <div className="ml-4 text-gray-400">• pwd (diretório atual)</div>
-            <div className="ml-4 text-gray-400">• df -h (espaço em disco)</div>
-            <div className="ml-4 text-gray-400">• free -h (memória)</div>
-            <div className="ml-4 text-gray-400">• docker ps (containers rodando)</div>
-            <div className="mt-4 text-gray-400">Comandos úteis no container:</div>
-            <div className="ml-4 text-gray-400">• ls -la (listar arquivos do container)</div>
-            <div className="ml-4 text-gray-400">• cat package.json (ver arquivo)</div>
-            <div className="ml-4 text-gray-400">• npm list (pacotes instalados)</div>
+            <div>Bem-vindo ao Terminal SSH</div>
+            <div>Selecione um servidor acima para começar</div>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-0">
             {output.map((line, index) => {
-              const isError = line.includes('❌');
-              const isSuccess = line.includes('✅');
-              const isInfo = line.includes('📁');
-              const isCommand = line.includes('$');
+              const isPrompt = line.includes('@') && line.includes('#');
+              const isError = line.includes('bash:') || line.includes('error:');
               
               return (
                 <div 
                   key={index} 
                   className={
+                    isPrompt ? 'text-green-400 font-bold' :
                     isError ? 'text-red-400' :
-                    isSuccess ? 'text-green-400' :
-                    isInfo ? 'text-blue-400' :
-                    isCommand ? 'text-cyan-400' :
                     'text-gray-300'
                   }
                 >
@@ -344,39 +339,33 @@ export default function TerminalSSH({ onClose }: TerminalSSHProps) {
         )}
 
         {loading && (
-          <div className="text-yellow-400 animate-pulse mt-2">
-            ⏳ Executando comando...
+          <div className="text-green-400 animate-pulse mt-1">
+            <span className="inline-block w-2 h-4 bg-green-400"></span>
           </div>
         )}
       </div>
 
       {/* Input */}
       <div className="p-4 border-t border-gray-700 bg-gray-800 flex-shrink-0">
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <span className="text-green-400 font-mono font-bold whitespace-nowrap">
+            {selectedContainer 
+              ? `${username}@container:${currentDir}#`
+              : `${username}@${hostname}:${currentDir}#`
+            }
+          </span>
           <input
             type="text"
             value={command}
             onChange={(e) => setCommand(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={
-              selectedContainer 
-                ? "Comando no container (ex: ls -la, cat package.json)..." 
-                : "Comando no servidor (ex: ls -la, docker ps)..."
-            }
+            placeholder="Digite um comando..."
             disabled={loading || !selectedServer}
-            className="flex-1 px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed font-mono"
+            className="flex-1 px-2 py-1 bg-transparent border-none text-white placeholder-gray-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-mono"
           />
-          <button
-            onClick={executeCommand}
-            disabled={loading || !command.trim() || !selectedServer}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Send className="w-4 h-4" />
-            Executar
-          </button>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          Pressione Enter para executar • {selectedContainer ? 'Executando no container' : 'Executando no servidor'}
+          Pressione Enter para executar
         </p>
       </div>
     </div>
