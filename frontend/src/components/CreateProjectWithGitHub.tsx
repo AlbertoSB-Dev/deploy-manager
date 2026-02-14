@@ -332,23 +332,28 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
                 <select
                   value={formData.serverId}
                   onChange={(e) => setFormData({ ...formData, serverId: e.target.value })}
+                  required
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="">💻 Servidor Local (padrão)</option>
+                  <option value="">Selecione um repositório</option>
                   {servers.map((server) => (
                     <option key={server._id} value={server._id}>
                       🌐 {server.name} ({server.host})
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {formData.serverId 
-                    ? '✓ Deploy será feito no servidor remoto via SSH' 
-                    : 'Deploy será feito localmente neste servidor'}
-                </p>
+                {formData.serverId ? (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    ✓ Deploy será feito no servidor selecionado via SSH
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Escolha o servidor onde o projeto será hospedado
+                  </p>
+                )}
                 {servers.length === 0 && (
                   <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                    ⚠️ Nenhum servidor remoto disponível. Adicione um na aba Servidores.
+                    ⚠️ Nenhum servidor disponível. Adicione um na aba Servidores primeiro.
                   </p>
                 )}
               </div>
