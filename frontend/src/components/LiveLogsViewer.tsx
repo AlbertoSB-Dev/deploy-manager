@@ -21,9 +21,9 @@ export default function LiveLogsViewer({ projectId, projectName }: LiveLogsViewe
   const loadRecentLogs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
       
-      const response = await fetch(`${apiUrl}/api/logs/${projectId}/recent?lines=100`, {
+      const response = await fetch(`${apiUrl}/logs/${projectId}/recent?lines=100`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
