@@ -103,40 +103,55 @@ set -e
 
 echo "PROGRESS:30:📦 Atualizando sistema..."
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-apt-get upgrade -y
+echo "→ Executando apt-get update..."
+apt-get update -y 2>&1 | grep -E "Hit|Get|Fetched|Reading" || true
+echo "→ Executando apt-get upgrade..."
+apt-get upgrade -y 2>&1 | grep -E "upgraded|installed|removed" || true
+echo "✅ Sistema atualizado"
 
 echo "PROGRESS:40:🔧 Instalando dependências básicas..."
-apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release git wget unzip
+echo "→ Instalando: apt-transport-https ca-certificates curl gnupg lsb-release git wget unzip"
+apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release git wget unzip 2>&1 | tail -5
+echo "✅ Dependências instaladas"
 
 echo "PROGRESS:50:🐳 Instalando Docker..."
 if ! command -v docker &> /dev/null; then
+    echo "→ Baixando script de instalação do Docker..."
     curl -fsSL https://get.docker.com -o get-docker.sh
-    sh get-docker.sh
+    echo "→ Executando instalação..."
+    sh get-docker.sh 2>&1 | tail -10
     rm get-docker.sh
     systemctl start docker
     systemctl enable docker
-    echo "✅ Docker instalado"
+    echo "✅ Docker instalado: $(docker --version)"
 else
-    echo "✅ Docker já instalado"
+    echo "✅ Docker já instalado: $(docker --version)"
 fi
 
 echo "PROGRESS:55:🐳 Instalando Docker Compose..."
 if ! command -v docker-compose &> /dev/null; then
+    echo "→ Obtendo última versão..."
     COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d\\" -f4)
+    echo "→ Baixando Docker Compose $COMPOSE_VERSION..."
     curl -L "https://github.com/docker/compose/releases/download/\${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
-    echo "✅ Docker Compose instalado"
+    echo "✅ Docker Compose instalado: $(docker-compose --version)"
 else
-    echo "✅ Docker Compose já instalado"
+    echo "✅ Docker Compose já instalado: $(docker-compose --version)"
 fi
 
 echo "PROGRESS:60:🌐 Criando rede Docker coolify..."
-docker network create coolify 2>/dev/null || echo "✅ Rede coolify já existe"
+if docker network create coolify 2>/dev/null; then
+    echo "✅ Rede coolify criada"
+else
+    echo "✅ Rede coolify já existe"
+fi
 
 echo "PROGRESS:65:🔀 Instalando Traefik (Proxy Reverso)..."
 if ! docker ps -a | grep -q traefik; then
+    echo "→ Criando diretório de configuração..."
     mkdir -p /opt/traefik
+    echo "→ Criando arquivo de configuração..."
     cat > /opt/traefik/traefik.yml << 'EOF'
 api:
   dashboard: true
@@ -158,6 +173,7 @@ log:
   level: INFO
 EOF
 
+    echo "→ Iniciando container Traefik..."
     docker run -d \\
       --name traefik \\
       --restart unless-stopped \\
@@ -167,7 +183,7 @@ EOF
       -p 8080:8080 \\
       -v /var/run/docker.sock:/var/run/docker.sock:ro \\
       -v /opt/traefik/traefik.yml:/etc/traefik/traefik.yml:ro \\
-      traefik:v2.10
+      traefik:v2.10 2>&1 | head -5
     
     echo "✅ Traefik instalado e rodando"
 else
@@ -176,41 +192,56 @@ fi
 
 echo "PROGRESS:70:📦 Instalando Node.js..."
 if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    apt-get install -y nodejs
-    echo "✅ Node.js instalado"
+    echo "→ Adicionando repositório NodeSource..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>&1 | tail -5
+    echo "→ Instalando Node.js..."
+    apt-get install -y nodejs 2>&1 | tail -3
+    echo "✅ Node.js instalado: $(node --version)"
+    echo "✅ NPM instalado: $(npm --version)"
 else
-    echo "✅ Node.js já instalado"
+    echo "✅ Node.js já instalado: $(node --version)"
 fi
 
 echo "PROGRESS:75:📁 Criando estrutura de diretórios..."
+echo "→ Criando /opt/projects"
 mkdir -p /opt/projects
+echo "→ Criando /opt/databases"
 mkdir -p /opt/databases
+echo "→ Criando /opt/backups"
 mkdir -p /opt/backups
+echo "→ Criando /opt/deploy-manager/logs"
 mkdir -p /opt/deploy-manager/logs
 chmod 755 /opt/projects /opt/databases /opt/backups /opt/deploy-manager
+echo "✅ Diretórios criados"
 
 echo "PROGRESS:80:🔥 Configurando firewall..."
 if command -v ufw &> /dev/null; then
+    echo "→ Habilitando UFW..."
     ufw --force enable
+    echo "→ Permitindo porta 22 (SSH)..."
     ufw allow 22/tcp
+    echo "→ Permitindo porta 80 (HTTP)..."
     ufw allow 80/tcp
+    echo "→ Permitindo porta 443 (HTTPS)..."
     ufw allow 443/tcp
+    echo "→ Permitindo portas 8000-9000 (Aplicações)..."
     ufw allow 8000:9000/tcp
+    echo "→ Permitindo porta 8080 (Traefik Dashboard)..."
     ufw allow 8080/tcp
     echo "✅ Firewall configurado"
 fi
 
 echo "PROGRESS:85:🧹 Limpando cache..."
-apt-get autoremove -y
+apt-get autoremove -y 2>&1 | tail -2
 apt-get clean
+echo "✅ Cache limpo"
 
 echo "PROGRESS:90:✅ Verificando instalações..."
-docker --version
-docker-compose --version
-node --version
-git --version
-docker ps | grep traefik
+echo "→ Docker: $(docker --version)"
+echo "→ Docker Compose: $(docker-compose --version)"
+echo "→ Node.js: $(node --version)"
+echo "→ Git: $(git --version)"
+echo "→ Traefik: $(docker ps --filter name=traefik --format '{{.Status}}')"
 
 echo "DONE"
 `;
@@ -266,10 +297,12 @@ echo "DONE"
     await ssh.execCommand(`cat > ${scriptPath} << 'EOFSCRIPT'\n${script}\nEOFSCRIPT`);
     await ssh.execCommand(`chmod +x ${scriptPath}`);
     
-    // Executar script
-    const result = await ssh.execCommand(`bash ${scriptPath}`, {
+    // Executar script com streaming de output
+    const result = await ssh.execCommand(`bash ${scriptPath} 2>&1`, {
       onStdout: (chunk) => {
-        const output = chunk.toString('utf8');
+        const output = chunk.toString('utf8').trim();
+        if (!output) return;
+        
         console.log(output);
         
         // Parsear progresso
@@ -278,20 +311,23 @@ echo "DONE"
           const progress = parseInt(progressMatch[1]);
           const message = progressMatch[2];
           this.updateStatus(serverId, 'provisioning', progress, message, io);
+        } else {
+          // Adicionar linha aos logs
+          this.addLog(serverId, output, io);
         }
-        
-        // Adicionar aos logs
-        this.addLog(serverId, output, io);
       },
       onStderr: (chunk) => {
-        const error = chunk.toString('utf8');
+        const error = chunk.toString('utf8').trim();
+        if (!error) return;
+        
         console.error(error);
-        this.addLog(serverId, `ERROR: ${error}`, io);
+        // Stderr também pode conter informações úteis, não apenas erros
+        this.addLog(serverId, error, io);
       }
     });
     
     if (result.code !== 0) {
-      throw new Error(`Script falhou com código ${result.code}: ${result.stderr}`);
+      throw new Error(`Script falhou com código ${result.code}`);
     }
     
     // Limpar script

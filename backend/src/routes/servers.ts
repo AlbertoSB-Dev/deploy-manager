@@ -324,27 +324,29 @@ router.post('/servers/:id/update-system', protect, async (req: AuthRequest, res)
         await sshService.connect(server);
         
         emitLog('🔌 Conectado ao servidor');
+        emitLog('');
         
         // Detectar sistema operacional
         const osResult = await sshService.executeCommand(serverId, 'cat /etc/os-release | grep "^ID=" | cut -d= -f2 | tr -d \'"\'');
         const os = osResult.stdout.trim();
         
-        emitLog(`📦 Sistema detectado: ${os}`);
+        emitLog(`📦 Sistema operacional detectado: ${os}`);
+        emitLog('');
         
-        let updateCommands: string[] = [];
+        let updateCommands: Array<{cmd: string, desc: string}> = [];
         
         if (os === 'ubuntu' || os === 'debian') {
           updateCommands = [
-            'export DEBIAN_FRONTEND=noninteractive',
-            'apt-get update -y',
-            'apt-get upgrade -y',
-            'apt-get autoremove -y',
-            'apt-get clean'
+            { cmd: 'export DEBIAN_FRONTEND=noninteractive', desc: 'Configurando modo não-interativo' },
+            { cmd: 'apt-get update -y 2>&1 | tail -20', desc: 'Atualizando lista de pacotes' },
+            { cmd: 'apt-get upgrade -y 2>&1 | grep -E "upgraded|installed|removed|Setting up" | tail -30', desc: 'Atualizando pacotes instalados' },
+            { cmd: 'apt-get autoremove -y 2>&1 | tail -10', desc: 'Removendo pacotes desnecessários' },
+            { cmd: 'apt-get clean', desc: 'Limpando cache de pacotes' }
           ];
         } else if (os === 'centos' || os === 'rhel') {
           updateCommands = [
-            'yum update -y',
-            'yum clean all'
+            { cmd: 'yum update -y 2>&1 | tail -30', desc: 'Atualizando sistema' },
+            { cmd: 'yum clean all', desc: 'Limpando cache' }
           ];
         } else {
           emitLog(`❌ Sistema operacional não suportado: ${os}`);
@@ -353,22 +355,39 @@ router.post('/servers/:id/update-system', protect, async (req: AuthRequest, res)
         }
         
         // Executar comandos
-        for (const cmd of updateCommands) {
-          emitLog(`⚙️ Executando: ${cmd}`);
+        for (const {cmd, desc} of updateCommands) {
+          emitLog(`⚙️ ${desc}...`);
+          emitLog(`→ Executando: ${cmd.split('|')[0].trim()}`);
+          emitLog('');
+          
           const result = await sshService.executeCommand(serverId, cmd);
-          if (result.code !== 0) {
-            emitLog(`⚠️ Aviso ao executar ${cmd}: ${result.stderr}`);
-          } else {
-            emitLog(`✅ ${cmd} concluído`);
+          
+          // Emitir output do comando
+          if (result.stdout) {
+            const lines = result.stdout.trim().split('\n');
+            lines.forEach(line => {
+              if (line.trim()) emitLog(`  ${line}`);
+            });
           }
+          
+          if (result.code !== 0 && result.stderr) {
+            emitLog(`⚠️ Aviso: ${result.stderr.trim()}`);
+          } else {
+            emitLog('');
+            emitLog(`✅ ${desc} concluído`);
+          }
+          emitLog('');
         }
         
+        emitLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         emitLog('✅ Sistema atualizado com sucesso!');
+        emitLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         if (io) {
           io.emit('system-update:complete', { serverId });
         }
       } catch (error: any) {
+        emitLog('');
         emitLog(`❌ Erro: ${error.message}`);
         if (io) {
           io.emit('system-update:error', { serverId, error: error.message });
