@@ -30,6 +30,7 @@ import monitoringRoutes from './routes/monitoring';
 import { UpdateCheckerService } from './services/UpdateCheckerService';
 import { panelDeployService } from './services/PanelDeployService';
 import SubscriptionRenewalService from './services/SubscriptionRenewalService';
+import { serverMonitorService } from './services/ServerMonitorService';
 
 const app = express();
 
@@ -233,6 +234,9 @@ mongoose.connect(MONGODB_URI)
     
     // Iniciar serviço de renovação automática
     SubscriptionRenewalService.start();
+    
+    // Iniciar monitoramento de servidores (verifica a cada 5 minutos)
+    serverMonitorService.start(5);
     
     server.listen(PORT, () => {
       console.log(`🚀 Deploy Manager rodando na porta ${PORT}`);

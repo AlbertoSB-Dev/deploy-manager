@@ -5,6 +5,7 @@ import { sshService } from '../services/SSHService';
 import { protect, AuthRequest } from '../middleware/auth';
 import { checkServerLimit, checkCanModify } from '../middleware/subscription';
 import { validateCommand } from '../utils/commandValidator';
+import { serverMonitorService } from '../services/ServerMonitorService';
 
 const router = express.Router();
 
@@ -364,20 +365,13 @@ router.post('/servers/:id/test', protect, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Servidor não encontrado' });
     }
     
-    const isConnected = await sshService.testConnection(server);
+    // Usar o serviço de monitoramento para verificar
+    const isConnected = await serverMonitorService.checkServer(req.params.id);
     
     if (isConnected) {
-      await Server.findByIdAndUpdate(req.params.id, {
-        status: 'online',
-        lastCheck: new Date()
-      });
-      res.json({ success: true, message: 'Conexão estabelecida com sucesso' });
+      res.json({ success: true, message: 'Conexão estabelecida com sucesso', status: 'online' });
     } else {
-      await Server.findByIdAndUpdate(req.params.id, {
-        status: 'offline',
-        lastCheck: new Date()
-      });
-      res.json({ success: false, message: 'Falha na conexão' });
+      res.json({ success: false, message: 'Falha na conexão', status: 'offline' });
     }
   } catch (error: any) {
     res.status(500).json({ error: error.message });
