@@ -21,11 +21,7 @@ router.get('/servers', protect, async (req: AuthRequest, res) => {
       servers.map(async (server) => {
         const projectCount = await Project.countDocuments({
           userId: req.user?._id,
-          $or: [
-            { serverId: server._id.toString() },
-            { serverId: { $exists: false } }, // Projetos locais
-            { serverId: null }
-          ]
+          serverId: server._id.toString()
         });
         
         return {
@@ -35,8 +31,10 @@ router.get('/servers', protect, async (req: AuthRequest, res) => {
       })
     );
     
+    console.log(`📊 Retornando ${serversWithProjects.length} servidores para usuário ${req.user?._id}`);
     res.json(serversWithProjects);
   } catch (error: any) {
+    console.error('❌ Erro ao listar servidores:', error);
     res.status(500).json({ error: error.message });
   }
 });

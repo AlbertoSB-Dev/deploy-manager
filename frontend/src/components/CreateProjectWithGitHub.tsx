@@ -42,12 +42,14 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
 
   const loadServers = async () => {
     try {
+      console.log('🔍 Carregando servidores...');
       const response = await api.get('/servers');
-      // Filtrar apenas servidores prontos
-      const readyServers = response.data.filter((s: any) => s.provisioningStatus === 'ready');
-      setServers(readyServers);
+      console.log('📦 Servidores recebidos:', response.data);
+      console.log('📊 Total de servidores:', response.data.length);
+      // Mostrar todos os servidores do usuário, independente do status
+      setServers(response.data);
     } catch (error) {
-      console.error('Erro ao carregar servidores:', error);
+      console.error('❌ Erro ao carregar servidores:', error);
     }
   };
 
@@ -335,7 +337,7 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
                   required
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="">Selecione um repositório</option>
+                  <option value="">Selecione um servidor</option>
                   {servers.map((server) => (
                     <option key={server._id} value={server._id}>
                       🌐 {server.name} ({server.host})
