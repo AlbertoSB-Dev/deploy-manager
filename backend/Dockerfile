@@ -1,8 +1,8 @@
 # Stage 1: Builder
 FROM node:20-alpine AS builder
 
-# Instalar dependências do sistema incluindo git
-RUN apk add --no-cache python3 make g++ git
+# Instalar dependências do sistema incluindo git e bash
+RUN apk add --no-cache python3 make g++ git bash openssh-client
 
 WORKDIR /app
 
@@ -27,6 +27,9 @@ RUN npm run build:prod || npx tsc --skipLibCheck --noEmit false || echo "Build c
 
 # Stage 2: Runner
 FROM node:20-alpine AS runner
+
+# Instalar git e bash para deploy do painel
+RUN apk add --no-cache git bash openssh-client
 
 WORKDIR /app
 

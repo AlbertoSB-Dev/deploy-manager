@@ -1,28 +1,52 @@
 import { Router } from 'express';
 import axios from 'axios';
+import SystemSettings from '../models/SystemSettings';
 
 const router = Router();
 
-// Configuração OAuth GitHub
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || '';
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || '';
-const GITHUB_REDIRECT_URI = process.env.GITHUB_REDIRECT_URI || 'http://localhost:8000/auth/github/callback';
+// Função para obter configurações do GitHub OAuth
+async function getGitHubConfig() {
+  try {
+    const settings = await SystemSettings.findOne();
+    return {
+      clientId: settings?.githubClientId || process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: settings?.githubClientSecret || process.env.GITHUB_CLIENT_SECRET || '',
+      redirectUri: settings?.githubCallbackUrl || process.env.GITHUB_REDIRECT_URI || 'http://localhost:8000/auth/github/callback'
+    };
+  } catch (error) {
+    console.error('Erro ao buscar configurações do GitHub:', error);
+    return {
+      clientId: process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+      redirectUri: process.env.GITHUB_REDIRECT_URI || 'http://localhost:8000/auth/github/callback'
+    };
+  }
+}
 
-// Debug - verificar se as variáveis foram carregadas
-console.log('🔑 GitHub OAuth Config:');
-console.log('  CLIENT_ID:', GITHUB_CLIENT_ID ? '✅ Configurado' : '❌ Não configurado');
-console.log('  CLIENT_SECRET:', GITHUB_CLIENT_SECRET ? '✅ Configurado' : '❌ Não configurado');
-console.log('  REDIRECT_URI:', GITHUB_REDIRECT_URI);
+// Log inicial (será atualizado dinamicamente)
+console.log('🔑 GitHub OAuth Config: Carregando do MongoDB...');
 
 // Iniciar OAuth - Redireciona para GitHub
-router.get('/auth/github', (req, res) => {
-  const scope = 'repo,read:user,user:email';
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${GITHUB_REDIRECT_URI}&scope=${scope}`;
-  
-  res.json({ 
-    authUrl: githubAuthUrl,
-    message: 'Redirecione o usuário para esta URL'
-  });
+router.get('/auth/github', async (req, res) => {
+  try {
+    const config = await getGitHubConfig();
+    
+    console.log('🔑 GitHub OAuth Config (Runtime):');
+    console.log('  CLIENT_ID:', config.clientId ? '✅ Configurado' : '❌ Não configurado');
+    console.log('  CLIENT_SECRET:', config.clientSecret ? '✅ Configurado' : '❌ Não configurado');
+    console.log('  REDIRECT_URI:', config.redirectUri);
+    
+    const scope = 'repo,read:user,user:email';
+    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${config.clientId}&redirect_uri=${config.redirectUri}&scope=${scope}`;
+    
+    res.json({ 
+      authUrl: githubAuthUrl,
+      message: 'Redirecione o usuário para esta URL'
+    });
+  } catch (error: any) {
+    console.error('Erro ao iniciar OAuth:', error);
+    res.status(500).json({ error: 'Erro ao iniciar autenticação' });
+  }
 });
 
 // Callback OAuth - Recebe código e troca por token
@@ -35,14 +59,17 @@ router.post('/auth/github/callback', async (req, res) => {
       return;
     }
 
+    // Buscar configurações do MongoDB
+    const config = await getGitHubConfig();
+
     // Trocar código por access token
     const tokenResponse = await axios.post(
       'https://github.com/login/oauth/access_token',
       {
-        client_id: GITHUB_CLIENT_ID,
-        client_secret: GITHUB_CLIENT_SECRET,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
         code,
-        redirect_uri: GITHUB_REDIRECT_URI
+        redirect_uri: config.redirectUri
       },
       {
         headers: {

@@ -1,8 +1,8 @@
 # Dockerfile otimizado para Backend em Produção
 FROM node:20-alpine AS base
 
-# Instalar dependências do sistema
-RUN apk add --no-cache git openssh-client
+# Instalar dependências do sistema (git necessário para deploy do painel)
+RUN apk add --no-cache git openssh-client bash
 
 WORKDIR /app
 
@@ -27,6 +27,12 @@ COPY --from=deps /app/node_modules ./node_modules
 
 # Copiar código fonte
 COPY . .
+
+# Adicionar gitCommit no package.json para detecção de versão
+RUN if [ -d .git ]; then \
+      COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown"); \
+      node -e "const pkg=require('./package.json'); pkg.gitCommit='$COMMIT'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2))"; \
+    fi
 
 # Criar diretórios necessários
 RUN mkdir -p /opt/projects /opt/databases /opt/backups

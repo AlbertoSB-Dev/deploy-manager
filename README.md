@@ -505,11 +505,19 @@ O script migra automaticamente todas as variáveis para `.env` na raiz.
 
 ## 📚 Documentação
 
+### 🚀 Início Rápido
 - 📖 [Guia de Início Rápido](./QUICK-START.md)
 - 🐳 [Deploy com Docker](./DOCKER-DEPLOY.md)
 - 📦 [Instalação Detalhada](./INSTALACAO.md)
 - ⚡ [Instalação em 1 Linha](./INSTALL-ONE-LINE.md)
+
+### 🔄 Sistema de Atualizações
+- 🔐 **[Configurar Token GitHub](./CONFIGURAR-GITHUB-TOKEN.md)** - Guia completo para repositórios privados
+- ⚡ **[Passos Rápidos](./PASSOS-RAPIDOS-TOKEN.md)** - Configuração em 5 minutos
 - 🔄 [Sistema de Controle de Versões](./VERSION-CONTROL.md)
+- 📋 [Fluxo de Deploy do Painel](./FLUXO-DEPLOY-PAINEL.md)
+
+### 🔧 Configuração
 - 🔐 [Repositórios Privados](./docs/PRIVATE-REPOS.md)
 - 🔑 [GitHub OAuth Setup](./docs/GITHUB-OAUTH-SETUP.md)
 - 🐳 [Integração Docker](./docs/DOCKER-INTEGRATION.md)
@@ -518,6 +526,20 @@ O script migra automaticamente todas as variáveis para `.env` na raiz.
 - 📝 [Changelog](./CHANGELOG.md)
 
 ## 🔧 Troubleshooting
+
+### GitHub OAuth retorna 404
+
+**Sintoma**: Erro 404 ao tentar conectar ao GitHub para acessar repositórios
+
+**Causa**: URL de callback configurada como localhost em vez da URL da VPS
+
+**Solução Rápida**:
+1. Admin → Configurações → GitHub OAuth
+2. Callback URL: `http://painel.SEU_IP.sslip.io/auth/github/callback`
+3. Atualizar também no GitHub: https://github.com/settings/developers
+4. Reiniciar backend: `docker-compose restart backend`
+
+📖 **Guia completo:** [CORRIGIR-GITHUB-OAUTH.md](./CORRIGIR-GITHUB-OAUTH.md)
 
 ### Socket.IO não conecta (erro CORS)
 
@@ -542,12 +564,24 @@ docker-compose up -d
 
 ### Sistema não detecta atualizações
 
-**Causa**: Commit hash não capturado durante build
+**Causa**: Token do GitHub não configurado ou commit hash não capturado
 
 **Solução**:
+
+1. **Configure o Token do GitHub** (para repositórios privados):
+   - Siga o guia: [PASSOS-RAPIDOS-TOKEN.md](./PASSOS-RAPIDOS-TOKEN.md)
+   - Ou guia completo: [CONFIGURAR-GITHUB-TOKEN.md](./CONFIGURAR-GITHUB-TOKEN.md)
+
+2. **Rebuild do painel** para capturar commit hash:
 ```bash
-docker-compose build --no-cache backend
+cd /opt/ark-deploy
+docker-compose down
+docker-compose build --no-cache
 docker-compose up -d
+```
+
+3. **Aguarde 5 minutos** (verificação automática) ou force no painel:
+   - Admin > Deploy do Painel > Verificar Atualizações
 docker-compose logs backend | grep -i "commit"
 ```
 
