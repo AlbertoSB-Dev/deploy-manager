@@ -1,0 +1,46 @@
+# ========================================
+# COMANDOS PARA ATUALIZAR NA VPS
+# ========================================
+
+# Copie e cole estes comandos na VPS (como root)
+
+# 1. Acessar diretório
+cd /opt/ark-deploy
+
+# 2. Baixar atualizações
+git fetch origin main
+git reset --hard origin/main
+
+# 3. Parar containers
+docker-compose down
+
+# 4. Rebuild backend (onde estão as mudanças)
+docker-compose build --no-cache backend
+
+# 5. Subir novamente
+docker-compose up -d
+
+# 6. Verificar logs (aguardar 30 segundos)
+sleep 30
+docker-compose logs backend | grep "GitHub OAuth Config" -A 3
+
+# ========================================
+# DEVE MOSTRAR:
+# ========================================
+# ✅ CLIENT_ID: Configurado
+# ✅ CLIENT_SECRET: Configurado
+# 📍 CALLBACK_URL: http://painel.38.242.213.195.sslip.io/auth/github/callback
+
+# ========================================
+# SE AINDA MOSTRAR "❌ Não configurado":
+# ========================================
+# 1. Verifique se salvou no painel (Admin → Configurações)
+# 2. Reinicie o backend: docker-compose restart backend
+# 3. Verifique logs novamente
+
+# ========================================
+# LOGS EM TEMPO REAL:
+# ========================================
+docker-compose logs -f backend
+
+# Pressione Ctrl+C para sair

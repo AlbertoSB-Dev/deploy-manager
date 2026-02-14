@@ -45,7 +45,7 @@ export default function GitHubConnect({ onConnected, onViewRepos }: GitHubConnec
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
       
-      const response = await fetch(`${apiUrl}/github/auth/github`);
+      const response = await fetch(`${apiUrl}/auth/github`);
       const data = await response.json();
 
       const width = 600;
@@ -64,7 +64,7 @@ export default function GitHubConnect({ onConnected, onViewRepos }: GitHubConnec
           popup?.close();
           
           const callbackResponse = await fetch(
-            `${apiUrl}/github/auth/github/callback`,
+            `${apiUrl}/auth/github/callback`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
