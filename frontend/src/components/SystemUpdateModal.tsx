@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle, XCircle, Loader, Terminal, RefreshCcw } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 
 interface SystemUpdateModalProps {
   serverId: string;
@@ -14,52 +15,75 @@ export function SystemUpdateModal({ serverId, serverName, onClose, onComplete }:
   const [logs, setLogs] = useState<string[]>([]);
   const [status, setStatus] = useState<'updating' | 'success' | 'error'>('updating');
   const [progress, setProgress] = useState(0);
+  const socketRef = useRef<Socket | null>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll para o final dos logs
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
 
   useEffect(() => {
-    // Conectar ao WebSocket para logs em tempo real
-    const socket = (window as any).io?.(process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8001');
+    // Conectar ao WebSocket
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8001';
+    console.log('🔌 Conectando ao WebSocket:', apiUrl);
     
-    if (socket) {
-      // Escutar logs de atualização
-      socket.on('system-update:log', (data: any) => {
-        if (data.serverId === serverId) {
-          setLogs((prev) => [...prev, data.log]);
-          
-          // Atualizar progresso baseado nos logs
-          if (data.log.includes('Atualizando sistema')) setProgress(20);
-          else if (data.log.includes('Instalando dependências')) setProgress(40);
-          else if (data.log.includes('Instalando Docker')) setProgress(60);
-          else if (data.log.includes('Limpando cache')) setProgress(80);
-          else if (data.log.includes('Verificando instalações')) setProgress(90);
-          else if (data.log.includes('✅')) setProgress(100);
-        }
-      });
-      
-      socket.on('system-update:complete', (data: any) => {
-        if (data.serverId === serverId) {
-          setStatus('success');
-          setProgress(100);
-          setTimeout(() => {
-            onComplete();
-          }, 2000);
-        }
-      });
-      
-      socket.on('system-update:error', (data: any) => {
-        if (data.serverId === serverId) {
-          setStatus('error');
-          setLogs((prev) => [...prev, `❌ Erro: ${data.error}`]);
-        }
-      });
-    }
+    const socket = io(apiUrl, {
+      transports: ['websocket', 'polling'],
+      reconnection: true
+    });
+    
+    socketRef.current = socket;
+    
+    socket.on('connect', () => {
+      console.log('✅ WebSocket conectado');
+      setLogs(prev => [...prev, '🔌 Conectado ao servidor de logs']);
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('❌ WebSocket desconectado');
+    });
+    
+    // Escutar logs de atualização
+    socket.on('system-update:log', (data: any) => {
+      console.log('📝 Log recebido:', data);
+      if (data.serverId === serverId) {
+        setLogs((prev) => [...prev, data.log]);
+        
+        // Atualizar progresso baseado nos logs
+        if (data.log.includes('Atualizando lista de pacotes')) setProgress(20);
+        else if (data.log.includes('Atualizando pacotes instalados')) setProgress(40);
+        else if (data.log.includes('Removendo pacotes desnecessários')) setProgress(70);
+        else if (data.log.includes('Limpando cache')) setProgress(85);
+        else if (data.log.includes('✅ Sistema atualizado')) setProgress(100);
+      }
+    });
+    
+    socket.on('system-update:complete', (data: any) => {
+      console.log('✅ Atualização completa:', data);
+      if (data.serverId === serverId) {
+        setStatus('success');
+        setProgress(100);
+        setTimeout(() => {
+          onComplete();
+        }, 2000);
+      }
+    });
+    
+    socket.on('system-update:error', (data: any) => {
+      console.error('❌ Erro na atualização:', data);
+      if (data.serverId === serverId) {
+        setStatus('error');
+        setLogs((prev) => [...prev, `❌ Erro: ${data.error}`]);
+      }
+    });
     
     return () => {
-      if (socket) {
-        socket.off('system-update:log');
-        socket.off('system-update:complete');
-        socket.off('system-update:error');
-        socket.disconnect();
-      }
+      console.log('🔌 Desconectando WebSocket');
+      socket.off('system-update:log');
+      socket.off('system-update:complete');
+      socket.off('system-update:error');
+      socket.disconnect();
     };
   }, [serverId, onComplete]);
 
@@ -164,7 +188,7 @@ export function SystemUpdateModal({ serverId, serverName, onClose, onComplete }:
               {logs.length === 0 ? (
                 <div className="flex gap-2">
                   <span className="text-green-400">$</span>
-                  <span className="text-gray-500">Iniciando atualização do sistema...</span>
+                  <span className="text-gray-500">Aguardando logs do servidor...</span>
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -174,8 +198,9 @@ export function SystemUpdateModal({ serverId, serverName, onClose, onComplete }:
                       <span className={`whitespace-pre-wrap break-all ${
                         log.includes('❌') || log.includes('Erro') ? 'text-red-400' :
                         log.includes('✅') ? 'text-green-400' :
-                        log.includes('⚙️') || log.includes('Executando') ? 'text-blue-400' :
+                        log.includes('⚙️') || log.includes('Executando') || log.includes('→') ? 'text-blue-400' :
                         log.includes('⚠️') ? 'text-yellow-400' :
+                        log.includes('🔌') || log.includes('📦') ? 'text-cyan-400' :
                         'text-gray-300'
                       }`}>{log}</span>
                     </div>
@@ -186,6 +211,7 @@ export function SystemUpdateModal({ serverId, serverName, onClose, onComplete }:
                       <span className="text-gray-500">_</span>
                     </div>
                   )}
+                  <div ref={logsEndRef} />
                 </div>
               )}
             </div>
