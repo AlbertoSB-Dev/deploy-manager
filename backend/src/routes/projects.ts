@@ -5,6 +5,7 @@ import { DeployService } from '../services/DeployService';
 import { GitCredentialService } from '../services/GitCredentialService';
 import { PortManager } from '../services/PortManager';
 import { UpdateCheckerService } from '../services/UpdateCheckerService';
+import { DockerfileTemplateService } from '../services/DockerfileTemplateService';
 import { protect, AuthRequest } from '../middleware/auth';
 import { checkSubscriptionActive, checkCanModify } from '../middleware/subscription';
 import { validateCommand } from '../utils/commandValidator';
@@ -13,6 +14,27 @@ import path from 'path';
 const router = Router();
 const deployService = new DeployService();
 const updateChecker = new UpdateCheckerService();
+
+// Listar templates de Dockerfile disponíveis
+router.get('/dockerfile-templates', protect, async (req: AuthRequest, res) => {
+  try {
+    const templates = DockerfileTemplateService.getTemplates();
+    res.json(templates);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Obter conteúdo de um template específico
+router.get('/dockerfile-templates/:id', protect, async (req: AuthRequest, res) => {
+  try {
+    const templateId = req.params.id as string;
+    const content = await DockerfileTemplateService.getTemplateContent(templateId);
+    res.json({ content });
+  } catch (error: any) {
+    res.status(404).json({ error: error.message });
+  }
+});
 
 // Listar todos os projetos do usuário
 router.get('/', protect, async (req: AuthRequest, res) => {
@@ -41,7 +63,7 @@ router.get('/:id', protect, async (req: AuthRequest, res) => {
 // Criar novo projeto
 router.post('/', protect, checkSubscriptionActive, async (req: AuthRequest, res) => {
   try {
-    const { name, displayName, gitUrl, branch, type, port, envVars, buildCommand, startCommand, gitAuth, serverId, serverName } = req.body;
+    const { name, displayName, gitUrl, branch, type, port, envVars, buildCommand, startCommand, gitAuth, serverId, serverName, dockerfileTemplate } = req.body;
     
     // Garantir que o nome do projeto seja lowercase (Docker requirement)
     const projectName = name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
@@ -126,6 +148,7 @@ router.post('/', protect, checkSubscriptionActive, async (req: AuthRequest, res)
       serverId: serverId || undefined,
       serverName: serverName || undefined,
       serverHost: serverHost || undefined,
+      dockerfileTemplate: dockerfileTemplate || undefined, // Salvar template selecionado
       userId: req.user?._id // Adicionar userId do usuário logado
     });
 

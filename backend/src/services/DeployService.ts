@@ -106,118 +106,57 @@ export class DeployService {
       
       await ssh.execCommand(`echo "${envContent}" > ${remoteProjectPath}/.env`);
       
-      // 3.5. Verificar se existe Dockerfile, se não, criar automaticamente
+      // 3.5. Verificar se existe Dockerfile, se não, usar template
       this.emitLog(project._id.toString(), '📄 Verificando Dockerfile...');
       logs += '📄 Verificando Dockerfile...\n';
       
       const dockerfileCheck = await ssh.execCommand(`test -f ${remoteProjectPath}/Dockerfile && echo "exists" || echo "missing"`);
       
       if (dockerfileCheck.stdout.trim() === 'missing') {
-        this.emitLog(project._id.toString(), '📝 Dockerfile não encontrado - gerando automaticamente...');
-        logs += '📝 Dockerfile não encontrado - gerando automaticamente...\n';
+        this.emitLog(project._id.toString(), '📝 Dockerfile não encontrado - usando template...');
+        logs += '📝 Dockerfile não encontrado - usando template...\n';
         
-        // Detectar tipo de projeto
-        const packageJsonCheck = await ssh.execCommand(`test -f ${remoteProjectPath}/package.json && echo "nodejs" || echo "unknown"`);
-        const projectType = packageJsonCheck.stdout.trim() === 'nodejs' ? 'nodejs' : 'generic';
+        // Verificar se projeto tem template selecionado
+        let templateId = (project as any).dockerfileTemplate;
         
-        // Gerar Dockerfile baseado no tipo
-        let dockerfileContent = '';
-        
-        if (projectType === 'nodejs') {
-          // Detectar se é Next.js, React, TypeScript ou Node puro
-          const packageCheck = await ssh.execCommand(`cat ${remoteProjectPath}/package.json | grep -E '"next"|"react-scripts"|"express"|"typescript"|"ts-node"' || echo "node"`);
-          const packageContent = packageCheck.stdout;
+        // Se não tem template selecionado, detectar automaticamente
+        if (!templateId) {
+          this.emitLog(project._id.toString(), '🔍 Detectando melhor template...');
+          logs += '🔍 Detectando melhor template...\n';
           
-          // Verificar se é TypeScript
-          const hasTsConfig = await ssh.execCommand(`test -f ${remoteProjectPath}/tsconfig.json && echo "yes" || echo "no"`);
-          const isTypeScript = hasTsConfig.stdout.trim() === 'yes';
+          const { DockerfileTemplateService } = await import('./DockerfileTemplateService');
+          templateId = await DockerfileTemplateService.detectTemplate(remoteProjectPath, ssh);
           
-          if (packageContent.includes('"next"')) {
-            // Next.js
-            dockerfileContent = `FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-ENV NODE_ENV=production
-ENV PORT=\${PORT:-3000}
-RUN npm run build
-EXPOSE \${PORT}
-CMD ["npm", "start"]`;
-          } else if (packageContent.includes('"react-scripts"')) {
-            // Create React App
-            dockerfileContent = `FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=build /app/build /usr/share/nginx/html
-COPY --from=build /app/build /usr/share/nginx/html
-RUN echo 'server { listen \${PORT:-80}; location / { root /usr/share/nginx/html; try_files \\$uri /index.html; } }' > /etc/nginx/conf.d/default.conf
-EXPOSE \${PORT:-80}
-CMD ["nginx", "-g", "daemon off;"]`;
-          } else if (isTypeScript) {
-            // TypeScript backend (Express, etc) - usar ts-node
-            dockerfileContent = `FROM node:20-alpine
-
-# Instalar dependências do sistema
-RUN apk add --no-cache python3 make g++
-
-WORKDIR /app
-
-# Copiar arquivos de dependências
-COPY package*.json ./
-
-# Instalar todas as dependências (incluindo devDependencies para ts-node)
-RUN npm ci
-
-# Copiar código fonte
-COPY . .
-
-# Variáveis de ambiente
-ENV NODE_ENV=production
-ENV PORT=\${PORT:-3000}
-
-# Expor porta
-EXPOSE \${PORT}
-
-# Usar ts-node para executar TypeScript diretamente
-CMD ["npx", "ts-node", "--transpile-only", "src/index.ts"]`;
-          } else {
-            // Node.js genérico (JavaScript)
-            dockerfileContent = `FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-ENV NODE_ENV=production
-ENV PORT=\${PORT:-3000}
-EXPOSE \${PORT}
-CMD ["npm", "start"]`;
+          if (!templateId) {
+            this.emitLog(project._id.toString(), '⚠️  Não foi possível detectar tipo do projeto, usando template Node.js genérico');
+            logs += '⚠️  Não foi possível detectar tipo do projeto, usando template Node.js genérico\n';
+            templateId = 'nodejs';
           }
-        } else {
-          // Projeto genérico
-          dockerfileContent = `FROM node:20-alpine
-WORKDIR /app
-COPY . .
-ENV PORT=\${PORT:-3000}
-EXPOSE \${PORT}
-CMD ["node", "index.js"]`;
         }
+        
+        // Obter conteúdo do template
+        const { DockerfileTemplateService } = await import('./DockerfileTemplateService');
+        const template = DockerfileTemplateService.getTemplate(templateId);
+        
+        if (!template) {
+          throw new Error(`Template ${templateId} não encontrado`);
+        }
+        
+        this.emitLog(project._id.toString(), `📋 Usando template: ${template.name}`);
+        logs += `📋 Usando template: ${template.name}\n`;
+        
+        const dockerfileContent = await DockerfileTemplateService.getTemplateContent(templateId);
         
         // Criar Dockerfile no servidor remoto
         await ssh.execCommand(`cat > ${remoteProjectPath}/Dockerfile << 'DOCKERFILE_EOF'
 ${dockerfileContent}
 DOCKERFILE_EOF`);
         
-        this.emitLog(project._id.toString(), `✅ Dockerfile criado para projeto ${projectType}`);
-        logs += `✅ Dockerfile criado para projeto ${projectType}\n`;
+        this.emitLog(project._id.toString(), `✅ Dockerfile criado: ${template.description}`);
+        logs += `✅ Dockerfile criado: ${template.description}\n`;
       } else {
-        this.emitLog(project._id.toString(), '✅ Dockerfile encontrado');
-        logs += '✅ Dockerfile encontrado\n';
+        this.emitLog(project._id.toString(), '✅ Dockerfile próprio encontrado');
+        logs += '✅ Dockerfile próprio encontrado\n';
       }
       
       // 4. Build da imagem Docker

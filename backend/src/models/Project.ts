@@ -48,6 +48,7 @@ export interface IProject extends Document {
   groupId?: string; // ID do grupo/pasta
   groupName?: string; // Nome do grupo para exibição
   userId: string; // ID do usuário dono do projeto
+  dockerfileTemplate?: string; // ID do template de Dockerfile (se não usar próprio)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -100,6 +101,7 @@ const ProjectSchema = new Schema({
   groupId: { type: String }, // ID do grupo/pasta
   groupName: { type: String }, // Nome do grupo
   userId: { type: String, required: true }, // ID do usuário dono
+  dockerfileTemplate: { type: String }, // ID do template de Dockerfile
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

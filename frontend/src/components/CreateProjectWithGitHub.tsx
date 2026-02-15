@@ -13,12 +13,22 @@ interface CreateProjectWithGitHubProps {
   onSuccess: () => void;
 }
 
+interface DockerfileTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: 'frontend' | 'backend' | 'fullstack';
+}
+
 export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWithGitHubProps) {
   const [step, setStep] = useState<'method' | 'github' | 'manual' | 'wordpress'>('method');
   const [githubConnected, setGithubConnected] = useState(false);
   const [githubToken, setGithubToken] = useState('');
   const [selectedRepo, setSelectedRepo] = useState<{ owner: string; repo: string; defaultBranch: string } | null>(null);
   const [servers, setServers] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<DockerfileTemplate[]>([]);
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
+  const [templatePreview, setTemplatePreview] = useState('');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -31,13 +41,15 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
     buildCommand: '',
     startCommand: '',
     envVars: '',
-    serverId: '' // Novo campo
+    serverId: '', // Novo campo
+    dockerfileTemplate: '' // Novo campo para template
   });
   const [creating, setCreating] = useState(false);
 
   // Carregar servidores disponíveis
   useEffect(() => {
     loadServers();
+    loadTemplates();
   }, []);
 
   const loadServers = async () => {
@@ -50,6 +62,26 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
       setServers(response.data);
     } catch (error) {
       console.error('❌ Erro ao carregar servidores:', error);
+    }
+  };
+
+  const loadTemplates = async () => {
+    try {
+      const response = await api.get('/projects/dockerfile-templates');
+      setTemplates(response.data);
+    } catch (error) {
+      console.error('❌ Erro ao carregar templates:', error);
+    }
+  };
+
+  const handlePreviewTemplate = async (templateId: string) => {
+    try {
+      const response = await api.get(`/projects/dockerfile-templates/${templateId}`);
+      setTemplatePreview(response.data.content);
+      setShowTemplatePreview(true);
+    } catch (error) {
+      console.error('❌ Erro ao carregar preview:', error);
+      toast.error('Erro ao carregar preview do template');
     }
   };
 
@@ -121,7 +153,8 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
         envVars: envVarsObj,
         gitAuth,
         serverId: formData.serverId || undefined,
-        serverName: selectedServer?.name || undefined
+        serverName: selectedServer?.name || undefined,
+        dockerfileTemplate: formData.dockerfileTemplate || undefined
       });
 
       toast.success('Projeto criado com sucesso!', { id: 'create' });
@@ -425,6 +458,85 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
                 />
               </div>
 
+              {/* Seletor de Template de Dockerfile */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  Dockerfile
+                </label>
+                <div className="space-y-3">
+                  {/* Opção: Usar próprio Dockerfile */}
+                  <label className="flex items-start gap-3 p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
+                    <input
+                      type="radio"
+                      name="dockerfileOption"
+                      value=""
+                      checked={formData.dockerfileTemplate === ''}
+                      onChange={() => setFormData({ ...formData, dockerfileTemplate: '' })}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900 dark:text-white">Usar Dockerfile do Repositório</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Se o projeto já tem um Dockerfile, ele será usado automaticamente
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Opção: Usar template do painel */}
+                  <div className="border-2 border-gray-200 dark:border-gray-600 rounded-lg p-3">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="dockerfileOption"
+                        value="template"
+                        checked={formData.dockerfileTemplate !== ''}
+                        onChange={() => {
+                          // Se não tem template selecionado, selecionar o primeiro
+                          if (!formData.dockerfileTemplate && templates.length > 0) {
+                            setFormData({ ...formData, dockerfileTemplate: templates[0].id });
+                          }
+                        }}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 dark:text-white mb-2">Usar Template do Painel</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                          Escolha um template otimizado para seu tipo de projeto
+                        </div>
+                        
+                        {formData.dockerfileTemplate !== '' && (
+                          <select
+                            value={formData.dockerfileTemplate}
+                            onChange={(e) => setFormData({ ...formData, dockerfileTemplate: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-2"
+                          >
+                            <option value="">Detecção Automática</option>
+                            {templates.map((template) => (
+                              <option key={template.id} value={template.id}>
+                                {template.name} - {template.description}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        
+                        {formData.dockerfileTemplate && formData.dockerfileTemplate !== '' && (
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewTemplate(formData.dockerfileTemplate)}
+                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            👁️ Ver conteúdo do template
+                          </button>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  💡 Se o repositório não tiver Dockerfile, o template selecionado será usado automaticamente
+                </p>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -493,6 +605,36 @@ export function CreateProjectWithGitHub({ onClose, onSuccess }: CreateProjectWit
           )}
         </div>
       </div>
+
+      {/* Modal de Preview do Template */}
+      {showTemplatePreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Preview do Dockerfile</h3>
+              <button
+                onClick={() => setShowTemplatePreview(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+                {templatePreview}
+              </pre>
+            </div>
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowTemplatePreview(false)}
+                className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

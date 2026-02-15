@@ -1,7 +1,7 @@
 {
-  "name": "ark-panel",
+  "name": "ark-deploy",
   "version": "1.5.0",
-  "description": "Ark Panel - Painel de gerenciamento de deploy multi-projeto com detecção automática de atualizações",
+  "description": "Ark Deploy - Sistema de gerenciamento de deploy multi-projeto com detecção automática de atualizações",
   "scripts": {
     "install:all": "npm install --prefix backend && npm install --prefix frontend",
     "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
@@ -14,14 +14,12 @@
   },
   "keywords": [
     "deploy",
-    "panel",
     "manager",
     "git",
     "automation",
-    "devops",
-    "ark"
+    "devops"
   ],
-  "author": "Ark Panel Team",
+  "author": "",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
